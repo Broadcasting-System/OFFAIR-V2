@@ -1,0 +1,13 @@
+{
+  "eyebrow": "BSSM 방송부 가이드북",
+  "title": "OFFAIR",
+  "description": "부산소프트웨어마이스터고등학교 방송부를 위해 웹 가이드북을 제작했습니다. 꼭 숙지하시고 활용해주시면 감사하겠습니다 :)",
+  "primaryCta": {
+    "label": "가이드 시작하기",
+    "href": "/docs/intro"
+  },
+  "secondaryCta": {
+    "label": "문서 기여하기",
+    "href": "/contribution"
+  }
+}
