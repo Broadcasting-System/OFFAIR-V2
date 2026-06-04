@@ -15,7 +15,7 @@ export function Hero() {
     <section className="relative isolate overflow-hidden border-b border-line">
       {/* background artwork */}
       <Image
-        src="/background.png"
+        src="/background.webp"
         alt=""
         fill
         priority

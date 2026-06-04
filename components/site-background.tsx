@@ -12,7 +12,7 @@ export function SiteBackground() {
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       <Image
-        src="/background.png"
+        src="/background.webp"
         alt=""
         fill
         sizes="100vw"
