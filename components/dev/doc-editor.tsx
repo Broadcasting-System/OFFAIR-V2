@@ -301,9 +301,19 @@ function SlashMenu({
   onPick: (s: Snippet) => void;
   onHover: (i: number) => void;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Keep the keyboard-selected option scrolled into view.
+  useEffect(() => {
+    listRef.current
+      ?.querySelector(`[data-idx="${activeIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
   let lastGroup = "";
   return (
     <div
+      ref={listRef}
       className="absolute z-30 max-h-72 w-64 overflow-y-auto rounded-lg border border-line-strong bg-ink-900/95 p-1 shadow-glow backdrop-blur"
       style={{ top: Math.max(8, top), left: Math.min(left, 320) }}
       role="listbox"
@@ -321,6 +331,7 @@ function SlashMenu({
             <button
               type="button"
               role="option"
+              data-idx={i}
               aria-selected={i === activeIndex}
               onMouseEnter={() => onHover(i)}
               onMouseDown={(e) => {
