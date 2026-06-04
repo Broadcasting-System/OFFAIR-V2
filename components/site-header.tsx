@@ -50,8 +50,9 @@ export function SiteHeader({
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/80 bg-ink-950/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <>
+      <header className="sticky top-0 z-50 border-b border-line/80 bg-ink-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* mobile menu button */}
         <button
           type="button"
@@ -125,31 +126,28 @@ export function SiteHeader({
           </a>
         </div>
       </div>
+      </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile full-screen menu — fills the viewport, closes on selection */}
       <div
-        className={`fixed inset-0 top-16 z-40 lg:hidden ${
-          open ? "" : "pointer-events-none"
+        className={`fixed inset-0 top-16 z-40 overflow-y-auto overscroll-contain bg-ink-950 transition-[opacity,transform] duration-200 lg:hidden ${
+          open
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-1 opacity-0"
         }`}
         aria-hidden={!open}
+        onClick={(e) => {
+          // close when any link inside is tapped (even same-page links)
+          if ((e.target as HTMLElement).closest("a")) setOpen(false);
+        }}
       >
-        <div
-          className={`absolute inset-0 bg-ink-950/70 backdrop-blur-sm transition-opacity ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setOpen(false)}
-        />
-        <div
-          className={`absolute left-0 top-0 h-full w-[82%] max-w-xs overflow-y-auto border-r border-line bg-ink-900 p-5 transition-transform duration-200 ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
-          <div className="mb-4 flex gap-2 md:hidden">
+        <div className="mx-auto max-w-2xl px-5 py-6">
+          <div className="mb-5 flex gap-2">
             {NAV_LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted"
+                className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted hover:text-white"
               >
                 {l.label}
               </Link>
@@ -164,7 +162,7 @@ export function SiteHeader({
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
       />
-    </header>
+    </>
   );
 }
 
