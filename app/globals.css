@@ -1,0 +1,325 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   OFFAIR — BSSM Broadcast Guide Book
+   Dark, electric-blue, retro-futuristic documentation theme
+   =========================================================================== */
+
+@theme {
+  /* Surfaces */
+  --color-ink-950: #04060c;
+  --color-ink-900: #06090f;
+  --color-ink-850: #080c15;
+  --color-ink-800: #0b111d;
+  --color-ink-700: #111927;
+  --color-ink-600: #1a2536;
+
+  /* Borders / hairlines */
+  --color-line: #16202f;
+  --color-line-strong: #233246;
+
+  /* Text */
+  --color-fg: #dce6f2;
+  --color-fg-muted: #8295ad;
+  --color-fg-faint: #566377;
+
+  /* Electric blue accent ramp (the OFFAIR glow) */
+  --color-beam-50: #e6f4ff;
+  --color-beam-200: #a9d8ff;
+  --color-beam-400: #4fb0ff;
+  --color-beam-500: #2e9bff;
+  --color-beam-600: #1a82e6;
+  --color-cyan: #5fd4ff;
+
+  --font-display: var(--font-orbitron);
+  --font-sans: var(--font-pretendard);
+  --font-mono: var(--font-mono-stack);
+
+  --shadow-glow: 0 0 40px -8px rgba(46, 155, 255, 0.45);
+}
+
+@layer base {
+  :root {
+    --font-mono-stack: "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo,
+      Consolas, monospace;
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01";
+  }
+
+  ::selection {
+    background: rgba(46, 155, 255, 0.3);
+    color: #fff;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-600);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  /* Hairline grid texture used behind the hero */
+  .bg-grid {
+    background-image: linear-gradient(
+        to right,
+        rgba(46, 155, 255, 0.06) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(46, 155, 255, 0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 40%,
+      #000 30%,
+      transparent 75%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 40%,
+      #000 30%,
+      transparent 75%
+    );
+  }
+
+  .text-glow {
+    text-shadow: 0 0 18px rgba(95, 212, 255, 0.55),
+      0 0 4px rgba(95, 212, 255, 0.7);
+  }
+
+  /* The faint corner-bracket frame seen across OFFAIR screens */
+  .hud-frame {
+    position: relative;
+  }
+  .hud-frame::before,
+  .hud-frame::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--color-beam-500);
+    opacity: 0.5;
+  }
+  .hud-frame::before {
+    top: 0;
+    left: 0;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .hud-frame::after {
+    bottom: 0;
+    right: 0;
+    border-left: 0;
+    border-top: 0;
+  }
+}
+
+/* ============================ MDX prose ============================ */
+.prose {
+  color: var(--color-fg);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.prose > * + * {
+  margin-top: 1.15em;
+}
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 6rem;
+}
+.prose h2 {
+  margin-top: 2.6em;
+  margin-bottom: 0.2em;
+  font-size: 1.6rem;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--color-line);
+}
+.prose h3 {
+  margin-top: 1.9em;
+  font-size: 1.25rem;
+}
+.prose h4 {
+  margin-top: 1.5em;
+  font-size: 1.05rem;
+}
+.prose p {
+  color: var(--color-fg);
+}
+.prose a {
+  color: var(--color-beam-400);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(79, 176, 255, 0.35);
+  transition: border-color 0.15s, color 0.15s;
+}
+.prose a:hover {
+  color: var(--color-beam-200);
+  border-bottom-color: var(--color-beam-200);
+}
+.prose strong {
+  color: #fff;
+  font-weight: 700;
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.4em;
+}
+.prose ul {
+  list-style: none;
+}
+.prose ul > li {
+  position: relative;
+}
+.prose ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1.1em;
+  top: 0.7em;
+  width: 6px;
+  height: 6px;
+  background: var(--color-beam-500);
+  transform: rotate(45deg);
+}
+.prose ol {
+  list-style: decimal;
+}
+.prose ol > li::marker {
+  color: var(--color-beam-400);
+  font-family: var(--font-display);
+}
+.prose li {
+  margin-top: 0.4em;
+}
+.prose blockquote {
+  border-left: 2px solid var(--color-beam-500);
+  padding-left: 1.1em;
+  color: var(--color-fg-muted);
+  font-style: italic;
+}
+/* Inline code */
+.prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-ink-700);
+  border: 1px solid var(--color-line);
+  border-radius: 5px;
+  padding: 0.15em 0.4em;
+  color: var(--color-beam-200);
+}
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  margin: 2.5em 0;
+}
+/* Screenshot images from the guide */
+.prose img {
+  display: block;
+  max-width: min(100%, 760px);
+  height: auto;
+  margin: 1.5em auto;
+  border: 1px solid var(--color-line);
+  border-radius: 0.6rem;
+  background: var(--color-ink-900);
+}
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--color-line);
+  padding: 0.6em 0.9em;
+  text-align: left;
+}
+.prose thead th {
+  background: var(--color-ink-800);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.prose tbody tr:nth-child(even) {
+  background: rgba(11, 17, 29, 0.5);
+}
+
+/* Shiki (rehype-pretty-code) */
+.prose figure[data-rehype-pretty-code-figure] {
+  margin: 0;
+}
+.prose pre {
+  overflow-x: auto;
+  padding: 1.1rem 0;
+  background: #060a12 !important;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.prose pre code {
+  display: grid;
+  font-family: var(--font-mono);
+  background: transparent;
+  counter-reset: line;
+}
+.prose pre code [data-line] {
+  padding: 0 1.2rem;
+  border-left: 2px solid transparent;
+}
+.prose pre code [data-highlighted-line] {
+  background: rgba(46, 155, 255, 0.1);
+  border-left-color: var(--color-beam-500);
+}
+.prose code[data-line-numbers] > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 1.4rem;
+  margin-right: 1.2rem;
+  text-align: right;
+  color: var(--color-fg-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
