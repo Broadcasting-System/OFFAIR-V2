@@ -10,6 +10,10 @@ export function SiteFooter() {
             © {new Date().getFullYear()} BSSM Broadcast · OFFAIR. 방송부 내부
             가이드 문서.
           </p>
+          <p className="mt-2 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-fg-faint">
+            Made by{" "}
+            <span className="text-beam-400">BSSM Broadcaster 4th</span> · 서정현
+          </p>
         </div>
         <div className="flex gap-6 font-mono text-xs uppercase tracking-wider text-fg-muted">
           <a
