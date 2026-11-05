@@ -21,6 +21,10 @@ const pretendard = localFont({
   display: "swap",
 });
 
+// 위키 저장은 revalidatePath 로 바로 반영된다. 이 값은 git pull 등 바깥에서 바뀐 문서를
+// 늦어도 5분 안에 다시 그리기 위한 안전망이다.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: {
     default: "OFFAIR — BSSM Broadcast Guide Book",
