@@ -193,6 +193,36 @@ export class Git {
     return this.parseLog(r.stdout);
   }
 
+  /**
+   * 파일 이력의 커밋별 바뀐 줄 수(+/−)와 커밋 본문(편집 요약). 이름 바뀜 따라감.
+   * name-status 와 numstat 은 한 번에 못 받아서 따로 부른다.
+   */
+  async stats(relPath: string, limit = 100): Promise<Map<string, { added: number; removed: number; body: string }>> {
+    const out = new Map<string, { added: number; removed: number; body: string }>();
+    if (!(await this.ready())) return out;
+    const r = await this.run(
+      [
+        "log", "--follow", "-M", "--numstat",
+        `--max-count=${Math.max(1, Math.min(limit, 1000))}`,
+        "--format=%x1e%H%x1f%b%x1d",
+        "--", this.toTop(relPath),
+      ],
+      { allowFail: true }
+    );
+    if (r.code !== 0) return out;
+    for (const chunk of r.stdout.split("\x1e")) {
+      if (!chunk.trim()) continue;
+      const [head, rest = ""] = chunk.split("\x1d");
+      const sep = head.indexOf("\x1f");
+      const rev = head.slice(0, sep).trim();
+      const body = head.slice(sep + 1).trim();
+      const line = rest.split("\n").find((l) => /^(\d+|-)\t(\d+|-)\t/.test(l));
+      const [a, d] = line ? line.split("\t") : ["0", "0"];
+      out.set(rev, { added: Number(a) || 0, removed: Number(d) || 0, body });
+    }
+    return out;
+  }
+
   async lastCommit(relPath: string): Promise<HistoryEntry | null> {
     if (!(await this.ready())) return null;
     const r = await this.run(

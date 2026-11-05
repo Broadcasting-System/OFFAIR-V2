@@ -667,8 +667,12 @@ export class Space {
 
   async history(slugInput: string | string[], limit = 100) {
     const slug = parseSlug(slugInput);
-    const entries = await this.git.log(this.relOf(slug), limit);
-    return entries.map((e) => this.decorate(e));
+    const rel = this.relOf(slug);
+    const [entries, stats] = await Promise.all([this.git.log(rel, limit), this.git.stats(rel, limit)]);
+    return entries.map((e) => {
+      const s = stats.get(e.rev);
+      return { ...this.decorate(e), added: s?.added ?? 0, removed: s?.removed ?? 0, body: s?.body ?? "" };
+    });
   }
 
   private decorate(e: HistoryEntry) {

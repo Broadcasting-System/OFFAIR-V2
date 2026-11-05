@@ -176,6 +176,16 @@ describe("이력·비교·되돌리기", () => {
 
     await assert.rejects(guide().revert("intro", h[2].rev, { baseRev: cur.rev }, editor), (e: unknown) => (e as StoreError).status === 409);
   });
+
+  test("이력 항목에 바뀐 줄 수(+/−)와 편집 요약이 붙는다", async () => {
+    const d0 = guide().requireDoc("intro");
+    await guide().save("intro", { baseRev: d0.rev, body: d0.body + "\n새 줄 하나\n\n새 줄 둘\n", message: "줄 두 개 더함" }, editor);
+    const h = await guide().history("intro");
+    assert.equal(h[0].body, "줄 두 개 더함");
+    assert.ok(h[0].added >= 2, `더한 줄: ${h[0].added}`);
+    assert.equal(h[0].removed, 0);
+    assert.ok(h[1].added > 0, "처음 만든 커밋도 줄 수가 있다");
+  });
 });
 
 describe("사이드바", () => {
