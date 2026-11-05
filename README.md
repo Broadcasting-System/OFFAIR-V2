@@ -10,6 +10,11 @@ npm run build   # 프로덕션 빌드 (모든 문서 SSG)
 npm start       # 빌드 결과 실행
 ```
 
+## 위키 백엔드
+
+서버 PC 에서 위키로 쓰기 위한 저장소·git 이력·API·권한은 [`docs/wiki-backend.md`](docs/wiki-backend.md) 참고.
+`npm test` 로 백엔드 테스트를 돌린다.
+
 ## 수정 모드 (dev 전용, `/edit`)
 
 `npm run dev` 에서만 열리는 인-브라우저 편집 UI. 프로덕션에선 404로 잠깁니다.
