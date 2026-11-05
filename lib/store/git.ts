@@ -233,6 +233,24 @@ export class Git {
     return this.parseLog(r.stdout)[0] ?? null;
   }
 
+  /**
+   * 폴더 아래에서 이 사람이 작성자인 커밋 (최근 것 먼저, 파일마다 한 줄).
+   * author 는 이메일 또는 이름 — 정규식이 아니라 글자 그대로 찾는다(--fixed-strings).
+   */
+  async authoredUnder(relDir: string, author: string, limit = 200): Promise<HistoryEntry[]> {
+    if (!author || !(await this.ready())) return [];
+    const r = await this.run(
+      [
+        "log", "--fixed-strings", `--author=${author}`, "--name-status", `--max-count=${Math.max(1, Math.min(limit, 1000))}`,
+        "--format=%x1e%H%x1f%an%x1f%aI%x1f%s",
+        "--", this.toTop(relDir),
+      ],
+      { allowFail: true }
+    );
+    if (r.code !== 0) return [];
+    return this.parseLog(r.stdout, true);
+  }
+
   /** 폴더 아래에서 지워진 파일들 (최근 것 먼저) */
   async deletedUnder(relDir: string, limit = 200): Promise<HistoryEntry[]> {
     if (!(await this.ready())) return [];

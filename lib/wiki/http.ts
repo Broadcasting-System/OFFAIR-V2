@@ -31,7 +31,7 @@ export function fail(status: number, code: string, message: string, extra: Recor
 
 export const unauthorized = () => new HttpError(401, "unauthorized", "로그인이 필요합니다.");
 export const forbidden = (msg = "권한이 없습니다.") => new HttpError(403, "forbidden", msg);
-export const notFound = (msg = "찾을 수 없습니다.") => new HttpError(404, "not_found", msg);
+export const notFound = (msg = "찾을 수 없습니다.", extra: Record<string, unknown> = {}) => new HttpError(404, "not_found", msg, extra);
 export const badRequest = (msg: string) => new HttpError(400, "bad_request", msg);
 
 const MAX_JSON = 3 * 1024 * 1024;

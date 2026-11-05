@@ -46,6 +46,20 @@ export interface Comment extends Reply {
   resolved?: { by: CommentAuthor; at: string } | null;
 }
 
+/** 나를 부른 댓글 한 줄 (내 메뉴용) */
+export interface MentionHit {
+  space: SpaceId;
+  slug: string[];
+  id: string;
+  /** 맨 위 댓글 id (답글이면 그 부모) */
+  threadId: string;
+  author: CommentAuthor;
+  body: string;
+  createdAt: string;
+  /** 본문 글에 단 댓글이면 고른 글 앞부분 */
+  quote: string | null;
+}
+
 interface CommentFile {
   version: 1;
   comments: Comment[];
@@ -219,6 +233,50 @@ export class CommentStore {
       target.item.likes = [...likes];
       return target.item;
     });
+  }
+
+  /**
+   * 나를 부른 댓글 — 이 공간의 모든 댓글·답글 중 mentions 에 memberId 가 있는 것 (최근 것 먼저).
+   * 지운 댓글과 내가 쓴 것은 뺀다.
+   */
+  mentionsOf(space: SpaceId, memberId: string, limit = 30): MentionHit[] {
+    const dir = joinInside(this.root, [space]);
+    const out: MentionHit[] = [];
+    const walk = (d: string, prefix: string[]) => {
+      if (!fs.existsSync(d)) return;
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) walk(full, [...prefix, e.name]);
+        else if (e.name.endsWith(".json")) {
+          const slug = [...prefix, e.name.slice(0, -5)];
+          let comments: Comment[];
+          try {
+            comments = this.read(full).comments;
+          } catch {
+            continue;
+          }
+          for (const c of comments) {
+            for (const x of [c, ...c.replies]) {
+              if (x === c && c.deleted) continue;
+              if (x.author.memberId === memberId) continue;
+              if (!(x.mentions ?? []).some((m) => m.memberId === memberId)) continue;
+              out.push({
+                space,
+                slug,
+                id: x.id,
+                threadId: c.id,
+                author: x.author,
+                body: x.body.slice(0, 200),
+                createdAt: x.createdAt,
+                quote: c.anchor?.quote?.slice(0, 80) ?? null,
+              });
+            }
+          }
+        }
+      }
+    };
+    walk(dir, []);
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   }
 
   /** @부르기 후보: 이 공간에 댓글을 쓴 적 있는 사람들 (memberId 가 있는 사람만) */

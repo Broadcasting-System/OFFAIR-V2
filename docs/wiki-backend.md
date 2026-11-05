@@ -49,6 +49,9 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 | `OFFAIR_GIT_COMMITTER_NAME` / `_EMAIL` | `OFFAIR Wiki` / `wiki@offair.local` | 커미터 (서버 PC 에 git user 설정이 없어도 커밋되게) |
 | `OFFAIR_GIT_BIN` | `git` | git 실행 파일 |
 | `OFFAIR_UPLOAD_MAX_IMAGE_MB` / `_FILE_MB` | `10` / `25` | 업로드 크기 제한 |
+| `OFFAIR_SERVICE_TOKEN` | 없음 | 같은 PC 서비스(CUE)의 읽기 전용 대리 접근 토큰. 없으면 그 기능은 꺼진다 (아래 "CUE 연동") |
+| `OFFAIR_PUBLIC_URL` | 없음 | 바깥 주소 (예: `https://offair.bssmcast.com`). 검색 결과·문서 글의 `url` 을 절대 주소로. 없으면 `/docs/…` 상대 경로 |
+| `OFFAIR_DEV_COHORT` | 없음 | 개발용 우회 사람의 기수 (내 메뉴에 "4기" 처럼 보인다) |
 | `OFFAIR_ALLOWED_ORIGINS` | 없음 | 쓰기 요청의 Origin 허용 목록(콤마). 터널이 `Host` 를 `localhost` 로 바꿔 넘겨 쓰기가 403 이 될 때 공개 호스트 이름을 넣는다 |
 
 ## 권한
@@ -105,6 +108,65 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 - 그 사이 누가 저장했으면 `409 { error:"conflict", currentRev, current:{ raw, title } }` 가 온다. 다시 받아 합친 뒤 새 `currentRev` 로 저장하면 된다.
 - 이력·diff·revert 에 쓰는 `rev` 는 커밋 해시다(짧은 것도 된다).
 - `frontmatter` 로 저장하면 지금 frontmatter 위에 덮어쓰고, 값을 `null` 로 준 키는 지운다. `raw` 를 주면 그 원문을 그대로 쓴다.
+
+## CUE 연동 (같은 PC 의 ONAIR 채팅 도우미가 위키를 읽기)
+
+CUE(ONAIR 서버 안의 Python 도우미)가 질문에 답할 때 최신 문서를 찾아 읽을 수 있게, **같은 PC 에서만·읽기만** 되는 길을 하나 둔다.
+
+### 머리글
+
+| 머리글 | 값 |
+| --- | --- |
+| `X-Offair-Service` | `OFFAIR_SERVICE_TOKEN` 과 같은 값 (해시 뒤 timing-safe 비교) |
+| `X-Offair-As-Role` | 누구 대신 읽는지: `superadmin` · `lead` · `member` · `alumni` · `teacher` · `guest`. 그 밖의 값·없음 = `guest` |
+| `X-Offair-As-Name` | 그 사람 이름, URL 인코딩 (`encodeURIComponent`). 없으면 `CUE` (손님이면 `손님`) |
+
+규칙 (`lib/wiki/auth.ts` 의 `serviceViewer`):
+
+- `OFFAIR_SERVICE_TOKEN` 이 비어 있으면 기능이 꺼져 있고 `X-Offair-Service` 는 무시한다(보통 손님 요청).
+- 토큰이 틀리면 **403**.
+- 실제 소켓 주소가 `127.0.0.1`/`::1`(`::ffff:127.0.0.1` 포함)이 아니면 **403**. `X-Forwarded-For` 는 보지 않는다.
+  소켓 주소는 서버가 켜질 때 `instrumentation.ts` 가 `http.Server` 의 `request` 를 감싸 `x-offair-peer: <주소>;<프로세스 난수>` 로 덮어써 붙인다(`lib/wiki/peer.ts`). 들어온 요청이 같은 머리글을 보내도 덮어쓰고, 난수가 다르면 믿지 않는다.
+- Cloudflare 를 거친 흔적(`Cf-Connecting-Ip`·`Cf-Ray`·`Cf-Visitor`·`Cf-Ipcountry`, `CDN-Loop: cloudflare`)이 있으면 **403** — 터널(cloudflared)은 같은 PC 에서 붙어 소켓 주소가 127.0.0.1 이기 때문이다.
+- GET·HEAD 말고는 **403** (읽기 전용). 댓글·저장·업로드 모두 안 된다.
+- 통과하면 그 역할의 보통 권한 그대로다. 부원 공간은 `member`·`lead`·`superadmin`·`alumni` 대리일 때만 읽히고, `teacher` 는 403, `guest` 는 401.
+- ONAIR 는 부르지 않는다(대리 역할은 CUE 가 이미 확인한 사람의 역할을 넘기는 것). 그래서 토큰은 ONAIR `.env` 와 OFFAIR env 에만 둔다.
+
+### 쓰는 API
+
+| 메서드 | 경로 | 응답 |
+| --- | --- | --- |
+| GET | `/api/wiki/<space>/search?q=<말>&limit=<1~20, 기본 8>` | `{ space, q, limit, total, results: [{ url, path, slug, space, title, category, description, snippet, heading, score, updatedAt }] }`. `url` 은 `OFFAIR_PUBLIC_URL` 이 있으면 절대 주소, `path` 는 언제나 사이트 안 경로. 공간마다 따로 부른다 |
+| GET | `/api/wiki/<space>/docs/<slug>?format=text[&section=<소제목>]` | `{ space, slug, title, description, category, url, path, updatedAt, updatedBy, headings, text, section? }`. 소제목을 못 찾으면 404 `{ error:"not_found", headings:[…] }` |
+
+`text` 는 LLM 이 읽기 좋은 평범한 마크다운이다(`lib/wiki/llm-text.ts`, 편집기와 같은 파서·`singleTilde:false`). 머리말은 빠지고(제목·설명은 따로), 컴포넌트는 이렇게 바뀐다:
+
+| MDX | text |
+| --- | --- |
+| `<Callout type="warn" title="T">본문</Callout>` | `> [주의] T: 본문` (줄마다 `>`; 종류: warn 주의·info 정보·tip 팁·note 메모·danger 경고) |
+| `<Steps><Step title="A">…</Step></Steps>` | `1. **A**` + 3칸 들여 쓴 본문 |
+| `<Figure caption="C" alt="A" />` | `[그림: C (A)]` (하나만 있으면 그것만) |
+| `<CardGrid><Card title="T" href="/x">설명</Card></CardGrid>` | `- T — /x · 설명` |
+| `<Kbd>⌘</Kbd>` · `<Badge>새</Badge>` | `` `⌘` `` · `새` |
+| `<YouTube id="…" start={30} title="T" />`, 예전 `[T](주소 "youtube")` | `[영상: T https://www.youtube.com/watch?v=…&t=30s]` |
+| 표 · 코드 블록 | GFM 그대로 |
+| `import`/`export` · `{식}` · HTML | 버림 (모르는 컴포넌트는 속 글만) |
+
+`section` 은 그 소제목(글자 같음 → 없으면 들어 있음, 대소문자 무시)부터 같거나 더 높은 단계 소제목 전까지다.
+
+### 예시
+
+```bash
+# 서버 PC 에서 (PowerShell 이면 curl.exe)
+curl -s "http://127.0.0.1:3000/api/wiki/guide/search?q=%EC%8B%9C%EB%B3%B4&limit=5" \
+  -H "X-Offair-Service: $OFFAIR_SERVICE_TOKEN" -H "X-Offair-As-Role: member" \
+  -H "X-Offair-As-Name: %EA%B9%80%EB%B6%80%EC%9B%90"
+
+curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text&section=%EC%95%88%EA%B1%B4" \
+  -H "X-Offair-Service: $OFFAIR_SERVICE_TOKEN" -H "X-Offair-As-Role: alumni"
+```
+
+주소는 터널 공개 주소가 아니라 **반드시 `http://127.0.0.1:<포트>`** 로 부른다 (공개 주소로 부르면 Cloudflare 를 거쳐 403).
 
 ## 저장·백업·push 흐름
 

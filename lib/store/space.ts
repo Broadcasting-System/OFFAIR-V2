@@ -786,6 +786,27 @@ export class Space {
     });
   }
 
+  /**
+   * 이 사람이 고친 문서 (내 메뉴의 "내가 고친 문서"). 작성자 이메일 `<memberId>@도메인` 으로 찾고,
+   * memberId 가 없으면 이름으로. 지금 남아 있는 문서만, 문서마다 마지막으로 고친 때 하나.
+   */
+  async editsBy(actor: Actor, limit = 20) {
+    const who = actor.memberId ? this.identity(actor).email : cleanIdent(actor.name, "");
+    const entries = await this.git.authoredUnder(this.layout.docsDir, who, limit * 5);
+    const seen = new Set<string>();
+    const out: { slug: string[]; url: string; title: string; category: string; date: string; message: string; rev: string }[] = [];
+    for (const e of entries) {
+      if (e.status === "D" || !e.path.endsWith(".mdx") || seen.has(e.path)) continue;
+      seen.add(e.path);
+      const slug = this.slugOfRel(e.path);
+      const doc = slug ? this.getDoc(slug) : null;
+      if (!slug || !doc) continue;
+      out.push({ slug, url: doc.url, title: doc.title, category: doc.category, date: e.date, message: e.message, rev: e.rev });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
   /** 지워진 문서 목록 (되살리기용). 지금 다시 있는 경로는 뺀다 */
   async trash(limit = 100) {
     const entries = await this.git.deletedUnder(this.layout.docsDir, limit * 2);

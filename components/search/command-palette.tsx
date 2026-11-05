@@ -43,6 +43,8 @@ interface Hit {
 
 interface ApiResult {
   url: string;
+  /** 사이트 안 경로 (url 은 OFFAIR_PUBLIC_URL 이 있으면 절대 주소) */
+  path?: string;
   title: string;
   category: string;
   description: string;
@@ -151,11 +153,11 @@ export function CommandPalette({
       const parts = await Promise.all(
         spaces.map(async (s) => {
           try {
-            const r = await api<{ results: ApiResult[] }>(`/api/wiki/${s}/search?q=${encodeURIComponent(searchText)}`, { signal: ctl.signal });
+            const r = await api<{ results: ApiResult[] }>(`/api/wiki/${s}/search?limit=20&q=${encodeURIComponent(searchText)}`, { signal: ctl.signal });
             return r.results.map(
               (x): Hit => ({
                 space: s,
-                url: x.url,
+                url: x.path ?? x.url,
                 title: x.title,
                 category: x.category,
                 description: x.description,

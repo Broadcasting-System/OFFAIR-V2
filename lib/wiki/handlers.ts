@@ -1,7 +1,8 @@
+import fs from "node:fs";
 import { getSpace, getStore, isSpaceId } from "@/lib/store";
 import { StoreError } from "@/lib/store/errors";
 import type { Actor, Space, SpaceId } from "@/lib/store/space";
-import { readUpload, saveUpload } from "@/lib/store/uploads";
+import { listUploads, readUpload, saveUpload } from "@/lib/store/uploads";
 import {
   canEdit,
   canModerate,
@@ -12,6 +13,7 @@ import {
   type Viewer,
 } from "./auth";
 import { HttpError, badRequest, forbidden, handle, json, notFound, readJson, unauthorized } from "./http";
+import { mdxToLlmText } from "./llm-text";
 import { revalidateSpace } from "./revalidate";
 
 /**
@@ -82,6 +84,24 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" ? v : undefined;
 }
 
+/** 바깥에서 쓸 절대 주소 (OFFAIR_PUBLIC_URL, 예: https://offair.bssmcast.com). 없으면 상대 경로 */
+export function publicUrl(path: string): string {
+  const base = (process.env.OFFAIR_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+  return base ? base + path : path;
+}
+
+/** 문서가 마지막으로 바뀐 때·사람 (git, 없으면 파일 시각) */
+async function updatedOf(space: Space, doc: { path: string }): Promise<{ updatedAt: string | null; updatedBy: string | null }> {
+  const last = await space.git.lastCommit(doc.path).catch(() => null);
+  if (last) return { updatedAt: last.date, updatedBy: last.author };
+  try {
+    const st = fs.statSync(space.absOf(doc.path));
+    return { updatedAt: st.mtime.toISOString(), updatedBy: null };
+  } catch {
+    return { updatedAt: null, updatedBy: null };
+  }
+}
+
 function afterWrite(id: SpaceId) {
   revalidateSpace(id);
 }
@@ -97,9 +117,39 @@ export function me(req: Request): Promise<Response> {
       name: v.name,
       memberId: v.memberId,
       authenticated: v.authenticated,
+      cohort: v.cohort ?? null,
+      roleLabel: v.roleLabel ?? null,
       ...permissions(v),
       readOnly: store.config.readOnly,
     });
+  });
+}
+
+/**
+ * GET /api/me/activity — 내 메뉴: 나를 부른 댓글·내가 고친 문서 (읽을 수 있는 공간만).
+ * 내 초안은 브라우저(localStorage)에만 있어서 여기 없다.
+ */
+export function activity(req: Request): Promise<Response> {
+  return handle(req, async () => {
+    const v = await getViewer(req);
+    if (!v.authenticated) throw unauthorized();
+    const store = getStore();
+    const ids: SpaceId[] = canReadSpace(v, "members") && store.members ? ["guide", "members"] : ["guide"];
+    const mentions = [];
+    const edits = [];
+    for (const id of ids) {
+      const space = getSpace(id);
+      if (v.memberId && canReadComments(v)) {
+        for (const m of store.comments.mentionsOf(id, v.memberId, 20)) {
+          const doc = space.getDoc(m.slug);
+          if (doc) mentions.push({ ...m, url: doc.url, title: doc.title });
+        }
+      }
+      for (const e of await space.editsBy(actorOf(v), 15)) edits.push({ space: id, ...e });
+    }
+    mentions.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    edits.sort((a, b) => b.date.localeCompare(a.date));
+    return json({ mentions: mentions.slice(0, 20), edits: edits.slice(0, 20) });
   });
 }
 
@@ -116,8 +166,11 @@ export function search(req: Request, p: SpaceParams): Promise<Response> {
   return handle(req, async () => {
     const { space, id } = await gate(req, p, "read");
     const index = space.searchIndex();
-    const q = new URL(req.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const sp = new URL(req.url).searchParams;
+    const q = sp.get("q")?.trim().toLowerCase() ?? "";
     if (!q) return json({ space: id, docs: index });
+    const limitIn = Number(sp.get("limit"));
+    const limit = Number.isFinite(limitIn) && limitIn > 0 ? Math.min(20, Math.floor(limitIn)) : 8;
     const tokens = q.split(/\s+/).filter(Boolean).slice(0, 8);
     const results = [];
     for (const d of index) {
@@ -144,10 +197,14 @@ export function search(req: Request, p: SpaceParams): Promise<Response> {
         at === -1
           ? d.description
           : (from > 0 ? "…" : "") + d.text.slice(from, to).replace(/\s+/g, " ").trim() + (to < d.text.length ? "…" : "");
-      results.push({ ...d, text: undefined, score, heading: heading ?? null, snippet });
+      results.push({ ...d, text: undefined, path: d.url, url: publicUrl(d.url), score, heading: heading ?? null, snippet });
     }
     results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-    return json({ space: id, q, results: results.slice(0, 50) });
+    const top = results.slice(0, limit);
+    const withDates = await Promise.all(
+      top.map(async (r) => ({ ...r, updatedAt: (await updatedOf(space, { path: space.relOf(r.slug) })).updatedAt }))
+    );
+    return json({ space: id, q, limit, total: results.length, results: withDates });
   });
 }
 
@@ -157,6 +214,26 @@ export function getDoc(req: Request, p: SlugParams): Promise<Response> {
   return handle(req, async () => {
     const { space, viewer, id } = await gate(req, p, "read");
     const doc = space.requireDoc(slugOf(p));
+    const sp = new URL(req.url).searchParams;
+    if (sp.get("format") === "text") {
+      // CUE 같은 LLM 용: 머리말은 따로, 본문은 평범한 마크다운 (lib/wiki/llm-text.ts)
+      const section = sp.get("section");
+      const t = mdxToLlmText(doc.body, { section });
+      if (!t.found) throw notFound("그 소제목을 찾을 수 없습니다.", { headings: t.headings.map((h) => h.text) });
+      return json({
+        space: id,
+        slug: doc.slug,
+        title: doc.title,
+        description: doc.description,
+        category: doc.category,
+        url: publicUrl(doc.url),
+        path: doc.url,
+        ...(await updatedOf(space, doc)),
+        ...(section ? { section } : {}),
+        headings: t.headings.map((h) => h.text),
+        text: t.text,
+      });
+    }
     const lastCommit = await space.git.lastCommit(doc.path).catch(() => null);
     const comments = canReadComments(viewer) ? getStore().comments.count(id, doc.slug) : undefined;
     return json({ ...doc, lastCommit, ...(comments !== undefined ? { commentCount: comments } : {}) });
@@ -352,15 +429,31 @@ export function upload(req: Request, p: SpaceParams): Promise<Response> {
     const file = form.get("file");
     if (!file || typeof file === "string") throw badRequest("file 필드가 없습니다.");
     const bytes = Buffer.from(await file.arrayBuffer());
-    const docField = form.get("doc");
+    const field = (k: string) => {
+      const v = form.get(k);
+      return typeof v === "string" && v.trim() ? v.trim() : null;
+    };
+    const num = (k: string) => {
+      const n = Number(field(k));
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
     const result = await saveUpload(
       space,
       getStore().config.dataDir,
-      { name: file.name, bytes, doc: typeof docField === "string" ? docField : null },
+      { name: file.name, bytes, doc: field("doc"), of: field("of"), width: num("width"), height: num("height") },
       actorOf(viewer)
     );
     afterWrite(id);
     return json(result, { status: 201 });
+  });
+}
+
+/** GET /api/wiki/<space>/uploads[?doc=&q=] — 올린 파일 목록 (넣기 창의 "올린 파일에서") */
+export function uploads(req: Request, p: SpaceParams): Promise<Response> {
+  return handle(req, async () => {
+    const { space, id } = await gate(req, p, "edit");
+    const sp = new URL(req.url).searchParams;
+    return json({ space: id, files: listUploads(space, getStore().config.dataDir, { doc: sp.get("doc"), q: sp.get("q") }) });
   });
 }
 

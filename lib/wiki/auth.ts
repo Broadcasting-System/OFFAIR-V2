@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import type { SpaceId } from "@/lib/store/space";
+import { HttpError } from "./http";
+import { isLoopback, peerOf } from "./peer";
 
 /**
  * 누가 요청했는지 — ONAIR 서버에 물어본다.
@@ -26,7 +28,10 @@ export interface Viewer {
   memberId: string | null;
   /** 로그인 토큰이 있었고 ONAIR 가 답했다 (역할이 guest 여도) */
   authenticated: boolean;
-  source: "onair" | "dev" | "none";
+  /** ONAIR 부원 정보 — 기수(예: "4"), 역할 이름(예: "부장"). 모르면 null */
+  cohort?: string | null;
+  roleLabel?: string | null;
+  source: "onair" | "dev" | "service" | "none";
 }
 
 export const GUEST: Viewer = {
@@ -124,12 +129,74 @@ function devViewer(): Viewer | null {
     name: process.env.OFFAIR_DEV_NAME || "개발자",
     memberId: process.env.OFFAIR_DEV_MEMBER_ID || "dev",
     authenticated: role !== "guest",
+    cohort: process.env.OFFAIR_DEV_COHORT || null,
+    roleLabel: null,
     source: "dev",
+  };
+}
+
+/* ───────────── 같은 PC 서비스(CUE)의 읽기 전용 대리 접근 ───────────── */
+
+export const SERVICE_HEADER = "x-offair-service";
+export const SERVICE_ROLE_HEADER = "x-offair-as-role";
+export const SERVICE_NAME_HEADER = "x-offair-as-name";
+
+/** Cloudflare(터널 포함)를 거쳐 온 요청의 흔적 — 터널은 같은 PC 에서 붙으므로 소켓 주소만으로는 모른다 */
+function viaCloudflare(req: Request): boolean {
+  const h = req.headers;
+  if (h.get("cf-connecting-ip") || h.get("cf-ray") || h.get("cf-visitor") || h.get("cf-ipcountry")) return true;
+  return /cloudflare/i.test(h.get("cdn-loop") ?? "");
+}
+
+function sameSecret(a: string, b: string): boolean {
+  const x = crypto.createHash("sha256").update(a).digest();
+  const y = crypto.createHash("sha256").update(b).digest();
+  return crypto.timingSafeEqual(x, y);
+}
+
+/**
+ * `X-Offair-Service: <OFFAIR_SERVICE_TOKEN>` 머리글이 있는 요청.
+ *  - 토큰 env 가 없으면 이 기능은 꺼져 있다 → undefined (보통 요청으로 처리, 머리글은 무시)
+ *  - 토큰이 틀림·소켓이 127.0.0.1/::1 이 아님·Cloudflare 를 거쳐 옴 → 403
+ *  - GET/HEAD 가 아니면 403 (읽기 전용)
+ *  - 통과하면 `X-Offair-As-Role`(모르는 값은 guest)·`X-Offair-As-Name`(URL 인코딩) 사람으로 본다.
+ *    그 뒤 권한은 보통 규칙 그대로 (부원 공간은 그 역할이 읽을 수 있을 때만).
+ */
+export function serviceViewer(req: Request): Viewer | undefined {
+  const sent = req.headers.get(SERVICE_HEADER);
+  if (sent === null) return undefined;
+  const token = process.env.OFFAIR_SERVICE_TOKEN || "";
+  if (!token) return undefined;
+  if (!sameSecret(sent.trim(), token)) throw new HttpError(403, "forbidden", "서비스 토큰이 맞지 않습니다.");
+  if (viaCloudflare(req) || !isLoopback(peerOf(req))) {
+    throw new HttpError(403, "forbidden", "서비스 접근은 같은 PC(127.0.0.1)에서만 됩니다.");
+  }
+  const method = req.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") throw new HttpError(403, "forbidden", "서비스 접근은 읽기만 됩니다.");
+  const r = String(req.headers.get(SERVICE_ROLE_HEADER) ?? "").trim().toLowerCase();
+  const role: Role = (ROLES as readonly string[]).includes(r) ? (r as Role) : "guest";
+  let name = "";
+  try {
+    name = decodeURIComponent(req.headers.get(SERVICE_NAME_HEADER) ?? "");
+  } catch {
+    name = "";
+  }
+  name = name.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 80);
+  return {
+    role,
+    name: name || (role === "guest" ? "손님" : "CUE"),
+    memberId: null,
+    authenticated: role !== "guest",
+    source: "service",
+    cohort: null,
+    roleLabel: null,
   };
 }
 
 /** 요청자. ONAIR 가 안 되면 손님으로 본다 (공개 문서는 계속 보이게) */
 export async function getViewer(req: Request): Promise<Viewer> {
+  const service = serviceViewer(req);
+  if (service) return service;
   const dev = devViewer();
   if (dev) return dev;
 
@@ -164,6 +231,8 @@ export async function getViewer(req: Request): Promise<Viewer> {
       name: String(j.name ?? "").trim().slice(0, 80) || (role === "guest" ? "손님" : "부원"),
       memberId: j.memberId === undefined || j.memberId === null ? null : String(j.memberId),
       authenticated: true,
+      cohort: j.cohort === undefined || j.cohort === null || j.cohort === "" ? null : String(j.cohort).slice(0, 10),
+      roleLabel: typeof j.roleLabel === "string" && j.roleLabel.trim() ? j.roleLabel.trim().slice(0, 20) : null,
       source: "onair",
     };
   } catch (e) {
