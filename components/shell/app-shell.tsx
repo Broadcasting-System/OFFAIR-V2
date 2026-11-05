@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import type { NavGroup, SearchDoc } from "@/lib/content";
 import { Logo, LogoMark } from "@/components/logo";
 import { SearchDialog } from "@/components/search-dialog";
-import { DocTree } from "./doc-tree";
+import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
+import { Toaster } from "@/components/ui/toast";
+import { canEditNow, useMe } from "@/lib/wiki/client";
 import {
   ClockIcon,
   CloseIcon,
@@ -15,6 +17,7 @@ import {
   MoonIcon,
   SearchIcon,
   SunIcon,
+  TrashIcon,
   TreeIcon,
   UserIcon,
 } from "./icons";
@@ -45,6 +48,8 @@ export function AppShell({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const docCount = nav.reduce((n, g) => n + g.items.length, 0);
+  const me = useMe();
+  const editable = canEditNow(me);
 
   // 페이지가 바뀌면 모바일 시트는 닫는다 (렌더 중 상태 조정 패턴)
   const [lastPath, setLastPath] = useState(pathname);
@@ -186,6 +191,7 @@ export function AppShell({
                 가이드북
               </Link>
               <span className="ml-auto text-xs text-fg-3">문서 {docCount}</span>
+              <NewDocButton />
               <button
                 type="button"
                 onClick={() => setSheetOpen(false)}
@@ -195,8 +201,20 @@ export function AppShell({
                 <CloseIcon />
               </button>
             </div>
-            <DocTree nav={nav} onNavigate={() => setSheetOpen(false)} />
-            <div className="mt-6 border-t border-line-2 px-2 pt-3 text-[13px] min-[769px]:hidden">
+            <ManagedTree nav={nav} onNavigate={() => setSheetOpen(false)} />
+            {editable && (
+              <div className="mt-6 border-t border-line-2 px-2 pt-3 text-[13px]">
+                <Link
+                  href="/trash"
+                  onClick={() => setSheetOpen(false)}
+                  aria-current={pathname === "/trash" ? "page" : undefined}
+                  className={`flex items-center gap-2 rounded-md py-1.5 ${pathname === "/trash" ? "font-semibold text-accent" : "text-fg-2 hover:text-fg"}`}
+                >
+                  <TrashIcon size={16} /> 휴지통
+                </Link>
+              </div>
+            )}
+            <div className={`${editable ? "mt-1" : "mt-6 border-t border-line-2 pt-3"} px-2 text-[13px] min-[769px]:hidden`}>
               <Link
                 href="/recent"
                 className="flex items-center gap-2 rounded-md py-1.5 text-fg-2"
@@ -225,6 +243,7 @@ export function AppShell({
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
       />
+      <Toaster />
     </>
   );
 }
