@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { NavGroup, SearchDoc } from "@/lib/content";
 import { Logo, LogoMark } from "@/components/logo";
-import { SearchDialog } from "@/components/search-dialog";
+import { CommandPalette } from "@/components/search/command-palette";
 import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
 import { Toaster } from "@/components/ui/toast";
 import { canEditNow, useMe } from "@/lib/wiki/client";
@@ -238,7 +238,7 @@ export function AppShell({
         <div className="shell-main">{children}</div>
       </div>
 
-      <SearchDialog
+      <CommandPalette
         index={searchIndex}
         open={searchOpen}
         onClose={() => setSearchOpen(false)}

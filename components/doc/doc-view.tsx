@@ -5,6 +5,7 @@ import { PageBar } from "@/components/shell/page-bar";
 import { TocCard } from "@/components/toc";
 import { SiteFooter } from "@/components/site-footer";
 import { EditLink } from "./edit-link";
+import { RecordVisit } from "@/components/search/recent";
 
 /**
  * 문서 한 장의 화면 (레이아웃 D).
@@ -79,6 +80,7 @@ export function DocView({
       </main>
 
       <TocCard items={doc.toc} />
+      <RecordVisit space="guide" url={doc.url} title={doc.title} category={doc.category} />
       <SiteFooter />
     </>
   );

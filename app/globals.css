@@ -681,3 +681,31 @@
 .toast-in {
   animation: toast-in 0.18s ease-out;
 }
+
+/* ============================ 명령 팔레트 (⌘K) ============================ */
+.palette-root {
+  padding: 80px 16px 0;
+}
+.palette {
+  border-radius: 14px;
+  max-height: calc(100dvh - 120px);
+}
+.palette-list {
+  max-height: min(60dvh, 520px);
+}
+@media (max-width: 640px) {
+  /* 모바일: 화면을 다 덮는 시트 */
+  .palette-root {
+    padding: 0;
+  }
+  .palette {
+    height: 100dvh;
+    max-height: none;
+    max-width: none;
+    border-radius: 0;
+  }
+  .palette-list {
+    flex: 1;
+    max-height: none;
+  }
+}

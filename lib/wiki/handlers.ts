@@ -137,7 +137,13 @@ export function search(req: Request, p: SpaceParams): Promise<Response> {
       if (heading) score += 10;
       for (const t of tokens) if (text.includes(t)) score += 5;
       const at = text.indexOf(tokens[0]);
-      const snippet = at === -1 ? d.description : d.text.slice(Math.max(0, at - 60), at + 100).replace(/\s+/g, " ").trim();
+      const from = Math.max(0, at - 60);
+      const to = at + 100;
+      // 앞뒤가 잘렸으면 … 를 붙인다
+      const snippet =
+        at === -1
+          ? d.description
+          : (from > 0 ? "…" : "") + d.text.slice(from, to).replace(/\s+/g, " ").trim() + (to < d.text.length ? "…" : "");
       results.push({ ...d, text: undefined, score, heading: heading ?? null, snippet });
     }
     results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
