@@ -8,6 +8,8 @@ import { toast } from "@/components/ui/toast";
 import { compareRevision } from "@/lib/wiki/compare-action";
 import { api, ApiError, canEditNow, HISTORY_EVENT, useMe } from "@/lib/wiki/client";
 import { apiSlug, josa, type SpaceKey } from "@/lib/wiki/links";
+import { dayLabel, hm, whenLabel } from "@/lib/wiki/time";
+import { Avatar } from "@/components/ui/avatar";
 
 /**
  * 수정 기록 · 되돌리기 (시안 f6-A "본문에서 바로").
@@ -58,40 +60,7 @@ function useHistory(): Ctx {
 
 /* ───────────── 날짜·사람 표시 ───────────── */
 
-const tz = "Asia/Seoul";
-const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
-const md = new Intl.DateTimeFormat("ko-KR", { timeZone: tz, month: "long", day: "numeric" });
-const ymd = new Intl.DateTimeFormat("ko-KR", { timeZone: tz, year: "numeric", month: "long", day: "numeric" });
-const hm = new Intl.DateTimeFormat("ko-KR", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-
-function dayLabel(d: Date, now = new Date()): string {
-  const k = dayKey.format(d);
-  if (k === dayKey.format(now)) return "오늘";
-  if (k === dayKey.format(new Date(now.getTime() - 86400000))) return "어제";
-  return k.slice(0, 4) === dayKey.format(now).slice(0, 4) ? md.format(d) : ymd.format(d);
-}
-
-export function whenLabel(iso: string): string {
-  const d = new Date(iso);
-  const day = dayLabel(d);
-  return `${day === "오늘" || day === "어제" ? day : md.format(d)} ${hm.format(d)}`;
-}
-
-const AVATAR = ["#ffab00", "#4bce97", "#9f8fef", "#6cc3e0", "#f87168", "#94c748"];
-
-function Avatar({ name, size = 24 }: { name: string; size?: number }) {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return (
-    <span
-      aria-hidden
-      className="grid flex-none place-items-center rounded-full font-bold text-[#172b4d]"
-      style={{ width: size, height: size, fontSize: size <= 22 ? 8.5 : 9, background: AVATAR[h % AVATAR.length] }}
-    >
-      {name.slice(0, 2)}
-    </span>
-  );
-}
+export { whenLabel };
 
 /** 커밋 메시지 → 사람이 읽을 한 줄 (편집 요약이 있으면 그것) */
 function summary(e: HistoryEntry): string {
