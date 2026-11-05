@@ -858,3 +858,86 @@ html[data-history="open"] .page-grid {
     pointer-events: auto;
   }
 }
+
+/* ============================ 댓글 (f7 B + A) ============================ */
+:root {
+  --cmt-hl: #fff2b3;
+  --cmt-hl-on: #ffe380;
+}
+:root[data-theme="dark"] {
+  --cmt-hl: rgba(245, 205, 71, 0.22);
+  --cmt-hl-on: rgba(245, 205, 71, 0.42);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cmt-hl: rgba(245, 205, 71, 0.22);
+    --cmt-hl-on: rgba(245, 205, 71, 0.42);
+  }
+}
+::highlight(offair-cmt) {
+  background-color: var(--cmt-hl);
+  text-decoration: underline 2px #f5cd47;
+  text-underline-offset: 4px;
+}
+::highlight(offair-cmt-on) {
+  background-color: var(--cmt-hl-on);
+  text-decoration: underline 2px #f5cd47;
+  text-underline-offset: 4px;
+}
+/* 강조 API 가 없는 브라우저: 글 위에 반투명 상자 */
+.cmt-box {
+  position: absolute;
+  background: var(--cmt-hl);
+  border-bottom: 2px solid #f5cd47;
+  opacity: 0.6;
+}
+.cmt-box-on {
+  background: var(--cmt-hl-on);
+}
+/* 여백 카드가 열리면 본문 오른쪽 자리를 넓히고 목차 카드는 숨긴다 */
+html[data-cmt-margin="on"] .page-grid {
+  grid-template-columns: minmax(24px, 1fr) minmax(0, 700px) minmax(320px, 1fr);
+}
+html[data-cmt-margin="on"] .toc-card {
+  display: none;
+}
+/* 좁은 화면: 아래 시트 */
+.cmt-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 72;
+  max-height: 72dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 auto;
+  max-width: 720px;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  visibility: hidden;
+  transition:
+    transform 0.22s ease,
+    visibility 0s linear 0.22s;
+}
+.cmt-sheet[data-open="true"] {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.22s ease;
+}
+.cmt-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 71;
+  background: var(--scrim);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.cmt-scrim[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
