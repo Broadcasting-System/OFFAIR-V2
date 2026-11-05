@@ -64,3 +64,18 @@ export function josa(word: string, withBatchim: string, without: string): string
   // 한글이 아니면 숫자·영문 끝소리를 대충 받침 없음으로
   return /[136780lmnLMN]$/.test(ch) ? withBatchim : without;
 }
+
+/** 로그인 뒤 돌아갈 주소 — 사이트 안 경로만 (열린 리다이렉트 방지) */
+export function safeNext(raw: string | null | undefined): string {
+  const v = String(raw ?? "");
+  if (!v.startsWith("/") || v.startsWith("//") || v.startsWith("/\\") || /[\u0000-\u001f]/.test(v)) return "/";
+  return v;
+}
+
+/** 로그인 벽의 [로그인] 주소 (/login 은 Cloudflare Access 가 지킨다) */
+export function loginHref(next: string): string {
+  return `/login?next=${encodeURIComponent(safeNext(next))}`;
+}
+
+/** Cloudflare Access 로그아웃 (쿠키를 지우고 Access 로그아웃 화면) */
+export const LOGOUT_HREF = "/cdn-cgi/access/logout";

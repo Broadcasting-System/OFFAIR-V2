@@ -8,7 +8,9 @@
  * 가운데: 제목/설명 칸(왼쪽 이름표) + 본문(Tiptap)
  * 아래: 도구 막대, 글자를 고르면 서식 메뉴, `/`·빈 줄 `+` 로 블록 메뉴
  *
- * 저장: lib/editor/wiki-client.ts (지금은 개발용 어댑터). 초안은 localStorage.
+ * 저장: lib/editor/wiki-client.ts (위키 API). 초안은 localStorage.
+ * 그림·파일·영상 넣기: 넣기 창(MediaInsertDialog) — 내 컴퓨터에서 / 올린 파일에서 / 주소로, 넣기 전 표시 달기.
+ * 댓글 모드: 고른 글에 댓글 (onComment) — 읽기 화면 여백 카드로 보인다.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -21,21 +23,30 @@ import { docToMdx } from "@/lib/editor/doc-to-mdx";
 import type { DocMetaFields } from "@/lib/editor/frontmatter";
 import { wikiClient } from "@/lib/editor/wiki-client";
 import { clearDraft, hhmm, loadDraft, saveDraft } from "@/lib/editor/draft";
-import { docUrlOf } from "@/lib/editor/paths";
+import { docHref, type SpaceKey } from "@/lib/wiki/links";
+import { emitTreeChanged } from "@/lib/wiki/client";
+import { ImageAnnotator, MediaInsertDialog, type AnnotatorResult, type MediaTab } from "@/components/media";
+import { defaultMediaClient, loadSidecar, uploadAnnotated } from "@/lib/media/client";
+import type { AnnotationSidecar } from "@/lib/media/annotate/types";
+import type { MediaItem } from "@/lib/media/types";
+import { youTubeWatchUrl } from "@/lib/media/url";
 import { editorExtensions, SlashStore, type SlashItem } from "./extensions";
 import { Toolbar, type BlockKind, type ListKind, type ToolbarHandle, type ToolbarState } from "./toolbar";
 import { BubbleMenu } from "./bubble-menu";
 import { SlashMenu } from "./slash-menu";
-import { EditorUiContext, type EditorUi } from "./context";
+import { EditorUiContext, type AnnotatedFigure, type EditorUi } from "./context";
 import { Icon } from "./icons";
 import { DarkMenu } from "./dark-menu";
 import { blocksFor, currentBlock, insertBlocks, isUrl, reveal, youtubeId } from "./insert";
-import { baseName, pickFile, prepareImage } from "./upload";
+import { baseName, prepareImage } from "./upload";
 import "./editor.css";
 
 export interface CommentTarget {
   from: number;
   to: number;
+  /** 고른 글의 DOM 범위와 본문 요소 — 읽기 화면에서 같은 글을 다시 찾을 자리(anchor)를 만든다 */
+  range: Range | null;
+  root: HTMLElement | null;
 }
 
 export interface WikiEditorProps {
@@ -53,8 +64,8 @@ export interface WikiEditorProps {
   /** 분류 고르기 (새 문서) */
   categories?: string[];
   readOnly?: boolean;
-  /** 댓글 모드로 고른 글 — 댓글 기능이 들어오면 여기에 잇는다 */
-  onComment?: (range: CommentTarget, text: string) => void;
+  /** 댓글 모드로 고른 글 + 쓴 말. 주면 편집기가 먼저 댓글 입력 줄을 띄운다 */
+  onComment?: (target: CommentTarget, quote: string, body: string) => Promise<void> | void;
 }
 
 interface Notice {
@@ -113,6 +124,10 @@ export function WikiEditor(props: WikiEditorProps) {
   const [plusPos, setPlusPos] = useState<{ left: number; top: number } | null>(null);
   const [ghost, setGhost] = useState<{ left: number; top: number } | null>(null);
   const [unfoldKey] = useState(() => `${props.path ?? "new"}:${Date.now()}`);
+  /** 넣기 창 — resolve 가 있으면 그림 하나를 골라 돌려준다(그림 바꾸기) */
+  const [media, setMedia] = useState<{ tab: MediaTab; single?: (item: MediaItem | null) => void } | null>(null);
+  /** 표시 달기 창 (그림 블록에서 연다) */
+  const [annot, setAnnot] = useState<{ src: string; name: string; initial?: AnnotationSidecar; done: (r: AnnotatedFigure | null) => void } | null>(null);
 
   const workRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -134,7 +149,7 @@ export function WikiEditor(props: WikiEditorProps) {
       say("이미지 올리는 중…");
       try {
         const prepared = await prepareImage(file);
-        const { url } = await wikiClient.uploadFile(space, prepared.file);
+        const { url } = await wikiClient.uploadFile(space, prepared.file, path);
         setToast(null);
         return { url, width: prepared.width, height: prepared.height };
       } catch (e) {
@@ -142,9 +157,41 @@ export function WikiEditor(props: WikiEditorProps) {
         return null;
       }
     },
-    [space, say],
+    [space, say, path],
   );
-  const ui = useMemo<EditorUi>(() => ({ uploadImage, toast: say }), [uploadImage, say]);
+
+  /* ── 넣기 창 · 표시 달기 (그림 블록도 쓴다) ── */
+  const pickImage = useCallback<NonNullable<EditorUi["pickImage"]>>(
+    () =>
+      new Promise((resolve) =>
+        setMedia({
+          tab: "upload",
+          single: (it) =>
+            resolve(
+              it && it.kind === "image"
+                ? { src: it.url, alt: it.alt ?? it.name.replace(/\.[^.]+$/, ""), caption: it.caption ?? null, sidecar: it.sidecarUrl ?? null, width: it.width ?? null, height: it.height ?? null }
+                : null,
+            ),
+        }),
+      ),
+    [],
+  );
+  const annotate = useCallback<NonNullable<EditorUi["annotate"]>>(
+    async ({ src, sidecar, name }) => {
+      let initial: AnnotationSidecar | undefined;
+      if (sidecar) {
+        try {
+          const sc = await loadSidecar(sidecar);
+          if (sc.base) initial = sc;
+        } catch {
+          say("달아 둔 표시를 못 불러왔어요 — 그림 위에 새로 달아요");
+        }
+      }
+      return new Promise((resolve) => setAnnot({ src: initial?.base ?? src, name, initial, done: resolve }));
+    },
+    [say],
+  );
+  const ui = useMemo<EditorUi>(() => ({ uploadImage, toast: say, pickImage, annotate }), [uploadImage, say, pickImage, annotate]);
 
   /* ── 블록 넣기 공용 ── */
   const put = useCallback((content: JSONContent | JSONContent[]) => {
@@ -199,18 +246,8 @@ export function WikiEditor(props: WikiEditorProps) {
         };
         map[op]?.();
       },
-      async insertImage(how: "file" | "url") {
-        if (how === "file") {
-          const f = await pickFile("image/*");
-          if (f) await insertImageFiles([f]);
-          return;
-        }
-        ask({
-          label: "이미지 주소",
-          icon: "image",
-          placeholder: "https://… 또는 /assets/…",
-          onSubmit: (v) => v && put(blocksFor.figure(v, "")),
-        });
+      insertImage(how: "file" | "library" | "url") {
+        setMedia({ tab: how === "library" ? "library" : how === "url" ? "url" : "upload" });
       },
       insertSteps() {
         put(blocksFor.steps());
@@ -227,19 +264,9 @@ export function WikiEditor(props: WikiEditorProps) {
             return put(blocksFor.cardGrid());
           case "raw":
             return put(blocksFor.raw("<Component />"));
-          case "file": {
-            const f = await pickFile("*/*");
-            if (!f) return;
-            say("파일 올리는 중…");
-            try {
-              const { url } = await wikiClient.uploadFile(space, f);
-              setToast(null);
-              put(blocksFor.linkParagraph(url, f.name));
-            } catch (e) {
-              say(`올리지 못했어요 — ${e instanceof Error ? e.message : String(e)}`);
-            }
+          case "file":
+            setMedia({ tab: "upload" });
             return;
-          }
           case "youtube":
             return ask({
               label: "유튜브 주소",
@@ -277,7 +304,7 @@ export function WikiEditor(props: WikiEditorProps) {
         }
       },
     };
-  }, [put, ask, insertImageFiles, docs, say, space]);
+  }, [put, ask, docs, say]);
 
   /* ── `/` 메뉴 항목 ── */
   const slashItems = useCallback((): SlashItem[] => {
@@ -294,7 +321,7 @@ export function WikiEditor(props: WikiEditorProps) {
       item("number", "번호 목록", "기본 블록", "number", ["ol", "number", "목록"], () => A.toggleList("number"), "1."),
       item("todo", "할 일 목록", "기본 블록", "todo", ["todo", "task", "체크"], () => A.toggleList("todo"), "[ ]"),
       item("table", "표", "기본 블록", "table", ["table", "표"], () => A.insertTable(3, 3, true)),
-      item("image", "이미지", "기본 블록", "image", ["image", "img", "그림", "사진"], () => void A.insertImage("file")),
+      item("image", "이미지", "기본 블록", "image", ["image", "img", "그림", "사진"], () => A.insertImage("file")),
       item("code", "코드 블록", "기본 블록", "code", ["code", "코드"], () => void A.more("code"), "```"),
       item("quote", "인용", "기본 블록", "quote", ["quote", "blockquote"], () => void A.more("quote"), ">"),
       item("hr", "구분선", "기본 블록", "hr", ["hr", "divider", "선"], () => void A.more("hr"), "---"),
@@ -561,7 +588,9 @@ export function WikiEditor(props: WikiEditorProps) {
           setDirty(false);
           setNotice(null);
           setStatus(`게시됨 · ${hhmm(Date.now())}`);
-          const dest = props.path ? returnUrl : docUrlOf(target);
+          // 제목·분류가 바뀌었을 수 있으니 서랍 트리도 다시 받는다
+          emitTreeChanged({ space });
+          const dest = props.path ? returnUrl : docHref(space as SpaceKey, target.split("/"));
           router.push(dest);
           router.refresh();
           return;
@@ -619,12 +648,75 @@ export function WikiEditor(props: WikiEditorProps) {
   }, [serialize, leave]);
 
   /* ── 댓글 모드 ── */
+  const onCommentProp = props.onComment;
   const emitComment = useCallback(
-    (range: CommentTarget, text: string) => {
-      if (props.onComment) props.onComment(range, text);
-      else say(`댓글 달 곳: “${text.length > 24 ? text.slice(0, 24) + "…" : text}” — 댓글 기능은 곧 연결돼요`);
+    (sel: { from: number; to: number }, text: string) => {
+      const e = editorRef.current;
+      if (!onCommentProp || !e) return say("이 문서에는 댓글을 달 수 없어요");
+      // PM 위치 → DOM 범위 (읽기 화면 글과 같은 글자로 자리를 만든다)
+      let range: Range | null = null;
+      try {
+        const a = e.view.domAtPos(sel.from);
+        const b = e.view.domAtPos(sel.to);
+        range = document.createRange();
+        range.setStart(a.node, a.offset);
+        range.setEnd(b.node, b.offset);
+      } catch {
+        range = null;
+      }
+      const quote = text.length > 24 ? text.slice(0, 24) + "…" : text;
+      ask({
+        label: "댓글",
+        icon: "comment",
+        placeholder: `“${quote}” 에 남길 말`,
+        onSubmit: (body) => {
+          if (!body) return;
+          void Promise.resolve(onCommentProp({ ...sel, range, root: e.view.dom as HTMLElement }, text, body)).then(
+            () => say("댓글을 남겼어요 — 읽기 화면 여백에 보여요"),
+            (err) => say(`댓글을 남기지 못했어요 — ${err instanceof Error ? err.message : String(err)}`),
+          );
+        },
+      });
     },
-    [props, say],
+    [onCommentProp, say, ask],
+  );
+
+  /* ── 넣기 창에서 고른 것 넣기 ── */
+  const insertMedia = useCallback(
+    (items: MediaItem[]) => {
+      const blocks: JSONContent[] = [];
+      for (const it of items) {
+        if (it.kind === "image") {
+          const f = blocksFor.figure(it.url, it.alt ?? it.name.replace(/\.[^.]+$/, ""), it.width, it.height);
+          f.attrs = { ...f.attrs, caption: it.caption || null, sidecar: it.sidecarUrl ?? null };
+          blocks.push(f);
+        } else if (it.kind === "youtube") {
+          const url = it.videoId ? youTubeWatchUrl({ id: it.videoId, start: it.start }) : it.url;
+          blocks.push({ type: "youtube", attrs: { url, title: it.name && !/^https?:/.test(it.name) ? it.name : "", start: it.start ?? null } });
+        } else {
+          blocks.push(blocksFor.linkParagraph(it.url, it.name));
+        }
+      }
+      if (blocks.length) put(blocks);
+    },
+    [put],
+  );
+
+  const onAnnotated = useCallback(
+    async (r: AnnotatorResult) => {
+      const a = annot;
+      if (!a) return;
+      say("표시 단 그림 올리는 중…");
+      try {
+        const item = await uploadAnnotated(defaultMediaClient, space, r, { name: a.name, doc: path ?? undefined });
+        setToast(null);
+        setAnnot(null);
+        a.done({ src: item.url, sidecar: item.sidecarUrl ?? null, caption: item.caption ?? null, width: item.width ?? null, height: item.height ?? null });
+      } catch (e) {
+        say(`올리지 못했어요 — ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
+    [annot, say, space, path],
   );
 
   useEffect(() => {
@@ -882,6 +974,38 @@ export function WikiEditor(props: WikiEditorProps) {
             </div>
           )}
           {prompt && <PromptBar prompt={prompt} onClose={() => { setPrompt(null); editorRef.current?.commands.focus(undefined, { scrollIntoView: false }); }} />}
+
+          <MediaInsertDialog
+            open={media !== null}
+            space={space}
+            doc={path ?? undefined}
+            initialTab={media?.tab}
+            multiple={!media?.single}
+            onClose={() => {
+              media?.single?.(null);
+              setMedia(null);
+            }}
+            onInsert={(items) => {
+              const m = media;
+              setMedia(null);
+              if (m?.single) m.single(items[0] ?? null);
+              else insertMedia(items);
+            }}
+          />
+          {annot && (
+            <ImageAnnotator
+              key={annot.src}
+              src={annot.src}
+              name={annot.name}
+              initial={annot.initial}
+              doneLabel={annot.initial ? "고친 그림으로 바꾸기" : "표시 단 그림으로 바꾸기"}
+              onCancel={() => {
+                annot.done(null);
+                setAnnot(null);
+              }}
+              onDone={onAnnotated}
+            />
+          )}
 
           {editor && !readOnly && (
             <Toolbar

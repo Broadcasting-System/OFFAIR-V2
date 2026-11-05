@@ -9,8 +9,8 @@ describe("컴포넌트 → 글", () => {
   test("Callout: 종류 라벨·제목·여러 줄", () => {
     assert.equal(t('<Callout type="warn" title="조심">\n전원은 마지막에\n\n두 번째 문단\n</Callout>\n'), "> [주의] 조심: 전원은 마지막에\n>\n> 두 번째 문단\n");
     assert.equal(t('<Callout type="tip">짧은 팁</Callout>\n'), "> [팁] 짧은 팁\n");
-    assert.equal(t('<Callout type="info">a</Callout>\n\n<Callout type="note">b</Callout>\n\n<Callout type="danger">c</Callout>\n'), "> [정보] a\n\n> [메모] b\n\n> [경고] c\n");
-    assert.equal(t("<Callout>종류 없음</Callout>\n"), "> [메모] 종류 없음\n");
+    assert.equal(t('<Callout type="info">a</Callout>\n\n<Callout type="note">b</Callout>\n\n<Callout type="danger">c</Callout>\n'), "> [정보] a\n\n> [참고] b\n\n> [경고] c\n");
+    assert.equal(t("<Callout>종류 없음</Callout>\n"), "> [참고] 종류 없음\n");
   });
 
   test("Steps/Step: 번호 목록, 제목은 굵게, 본문은 들여쓰기", () => {

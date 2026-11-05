@@ -33,6 +33,8 @@
   --code: #f4f5f7;
   --lock: #6e5dc6;
   --lock-bg: #f3f0ff;
+  --lock-line: #dfd8fd;
+  --lock-fg: #ffffff;
   --mark: #fff2b3;
   --avatar: #ffab00;
   --avatar-fg: #172b4d;
@@ -66,6 +68,8 @@
   --code: #2c333a;
   --lock: #b8acf6;
   --lock-bg: #2b273f;
+  --lock-line: #3d3560;
+  --lock-fg: #1d2125;
   --mark: #7f5f01;
   --scrim: rgba(0, 0, 0, 0.6);
   --elev-pop: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -98,6 +102,8 @@
     --code: #2c333a;
     --lock: #b8acf6;
     --lock-bg: #2b273f;
+  --lock-line: #3d3560;
+  --lock-fg: #1d2125;
     --mark: #7f5f01;
     --scrim: rgba(0, 0, 0, 0.6);
     --elev-pop: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -129,6 +135,8 @@
   --color-code: var(--code);
   --color-lock: var(--lock);
   --color-lock-bg: var(--lock-bg);
+  --color-lock-line: var(--lock-line);
+  --color-lock-fg: var(--lock-fg);
   --color-avatar: var(--avatar);
   --color-avatar-fg: var(--avatar-fg);
   --color-scrim: var(--scrim);
@@ -945,4 +953,65 @@ html[data-cmt-margin="on"] .toc-card {
 .cmt-scrim[data-open="true"] {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* =========================== 부원 공간 (시안 f8) =========================== */
+.members-band {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 22px;
+  background: var(--lock-bg);
+  color: var(--lock);
+  border-bottom: 1px solid var(--lock-line);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .members-band {
+    padding: 0 16px;
+  }
+}
+
+/* 로그인 벽 — 본문 칼럼 전체를 덮는 옅은 바탕 위 가운데 카드 */
+.login-wall {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  background: var(--bg-soft);
+}
+@media (max-width: 768px) {
+  .login-wall {
+    min-height: calc(100dvh - 52px);
+  }
+}
+.login-wall-card {
+  width: min(440px, 100%);
+  padding: 30px 30px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(9, 30, 66, 0.08);
+}
+
+/* 떠 있는 작은 메뉴 (공간 스위처 · 내 메뉴) */
+.pop-menu {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 12px 32px rgba(9, 30, 66, 0.18);
+  padding: 8px;
+}
+:root[data-theme="dark"] .pop-menu {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pop-menu {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
 }

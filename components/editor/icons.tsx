@@ -37,6 +37,7 @@ const P: Record<string, React.ReactNode> = {
   trash: (<><path d="M5 7h14M10 7V5h4v2M7 7l1 12.5h8L17 7" /></>),
   close: (<path d="M6 6l12 12M18 6 6 18" />),
   check: (<path d="m5 12.5 4.5 4.5L19 7.5" />),
+  mark: (<><circle cx="8" cy="8" r="3.5" /><path d="M7.2 6.8 8 6.3v3.4" /><path d="M13 13h7v6.5h-7z" /><path d="m11 11-2.5-1" /></>),
   external: (<><path d="M14 4.5h5.5V10M19.5 4.5 11 13" /><path d="M17 14v5.5H4.5V7H10" /></>),
 };
 

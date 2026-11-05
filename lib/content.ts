@@ -1,6 +1,6 @@
 import "server-only";
 import { getStore } from "@/lib/store";
-import type { DocFull } from "@/lib/store/space";
+import type { DocFull, Space } from "@/lib/store/space";
 import { extractToc as extractTocImpl, type TocItem as StoreTocItem } from "@/lib/store/markdown";
 
 /**
@@ -20,7 +20,12 @@ import { extractToc as extractTocImpl, type TocItem as StoreTocItem } from "@/li
  *
  * 저장소는 파일 mtime·크기로 캐시하므로 위키 API 로 저장하거나 파일을 직접 고쳐도
  * 다음 렌더에서 바로 반영된다 (페이지 캐시는 저장 API 가 revalidatePath 로 비운다).
+ *
+ * 함수마다 공간을 고를 수 있다 (기본 guide). 부원 공간(members)은 권한을 확인한 동적 페이지
+ * (app/members/**)에서만 부른다 — 정적 생성·루트 레이아웃에서는 부르지 않는다.
  */
+
+export type ContentSpace = "guide" | "members";
 
 export interface DocMeta {
   slug: string[];
@@ -32,6 +37,8 @@ export interface DocMeta {
 }
 
 export interface Doc extends DocMeta {
+  /** 공간 루트 기준 파일 경로 (git 이력용) */
+  path: string;
   body: string;
   toc: TocItem[];
 }
@@ -46,6 +53,12 @@ export interface NavGroup {
 
 function guide() {
   return getStore().guide;
+}
+
+/** 공간. 부원 공간을 쓸 수 없으면(데이터 폴더 위치 문제) null */
+export function spaceOf(id: ContentSpace = "guide"): Space | null {
+  const store = getStore();
+  return id === "guide" ? store.guide : store.members;
 }
 
 /**
@@ -87,22 +100,26 @@ export function extractToc(body: string): TocItem[] {
   return extractTocImpl(body);
 }
 
-export function getAllDocMeta(): DocMeta[] {
-  return guide()
+export function getAllDocMeta(space: ContentSpace = "guide"): DocMeta[] {
+  const sp = spaceOf(space);
+  if (!sp) return [];
+  return sp
     .listDocs()
     .map(meta)
     .sort((a, b) => a.order - b.order);
 }
 
-export function getDoc(slug: string[]): Doc | null {
+export function getDoc(slug: string[], space: ContentSpace = "guide"): Doc | null {
+  const sp = spaceOf(space);
+  if (!sp) return null;
   let d: DocFull | null = null;
   try {
-    d = guide().getDoc(decodeSlug(slug));
+    d = sp.getDoc(decodeSlug(slug));
   } catch {
     return null; // 잘못된 경로 → 404
   }
   if (!d) return null;
-  return { ...meta(d), body: d.body, toc: d.toc };
+  return { ...meta(d), path: d.path, body: d.body, toc: d.toc };
 }
 
 export function getAllSlugs(): string[][] {
@@ -112,23 +129,25 @@ export function getAllSlugs(): string[][] {
 }
 
 /** Sidebar tree: grouped by category, ordered by sidebar.json then `order`. */
-export function getNav(): NavGroup[] {
-  return guide()
+export function getNav(space: ContentSpace = "guide"): NavGroup[] {
+  const sp = spaceOf(space);
+  if (!sp) return [];
+  return sp
     .tree()
     .groups.filter((g) => g.items.length > 0)
     .map((g) => ({ category: g.category, order: g.order, items: g.items.map(meta) }));
 }
 
 /** Flattened, ordered list for prev/next navigation. */
-export function getFlatDocs(): DocMeta[] {
-  return getNav().flatMap((g) => g.items);
+export function getFlatDocs(space: ContentSpace = "guide"): DocMeta[] {
+  return getNav(space).flatMap((g) => g.items);
 }
 
-export function getAdjacent(slug: string[]): {
+export function getAdjacent(slug: string[], space: ContentSpace = "guide"): {
   prev: DocMeta | null;
   next: DocMeta | null;
 } {
-  const flat = getFlatDocs();
+  const flat = getFlatDocs(space);
   const key = decodeSlug(slug).join("/");
   const i = flat.findIndex((d) => d.slug.join("/") === key);
   return {

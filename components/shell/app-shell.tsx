@@ -7,8 +7,12 @@ import type { NavGroup, SearchDoc } from "@/lib/content";
 import { Logo, LogoMark } from "@/components/logo";
 import { CommandPalette } from "@/components/search/command-palette";
 import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
+import { treeSpace, useTree } from "@/components/manage/tree-ops";
 import { Toaster } from "@/components/ui/toast";
 import { canEditNow, useMe } from "@/lib/wiki/client";
+import { loginHref, type SpaceKey } from "@/lib/wiki/links";
+import { SpaceSwitcher } from "./space-switcher";
+import { UserMenu } from "./user-menu";
 import {
   ClockIcon,
   CloseIcon,
@@ -19,7 +23,6 @@ import {
   SunIcon,
   TrashIcon,
   TreeIcon,
-  UserIcon,
 } from "./icons";
 import {
   OPEN_SEARCH_EVENT,
@@ -47,9 +50,18 @@ export function AppShell({
   const drawerOpen = usePanelOpen("drawer");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const docCount = nav.reduce((n, g) => n + g.items.length, 0);
   const me = useMe();
   const editable = canEditNow(me);
+  // 지금 공간 — 부원 공간 화면(/members…)과 그 문서 편집(/write/members/…)이면 부원 공간
+  const space: SpaceKey = /^\/(members|write\/members)(\/|$)/.test(pathname) ? "members" : "guide";
+  const canSeeSpace = space === "guide" || !!me?.canReadMembers;
+  const { groups } = useTree();
+  const docCount =
+    space === "guide"
+      ? nav.reduce((n, g) => n + g.items.length, 0)
+      : treeSpace() === "members" && groups
+        ? groups.reduce((n, g) => n + g.items.length, 0)
+        : null;
 
   // 페이지가 바뀌면 모바일 시트는 닫는다 (렌더 중 상태 조정 패턴)
   const [lastPath, setLastPath] = useState(pathname);
@@ -138,19 +150,13 @@ export function AppShell({
               href="/members"
               label="부원 공간 (부원만)"
               active={membersActive}
+              tone="lock"
             >
               <LockIcon />
             </RailLink>
             <span className="flex-1" />
             <ThemeButton className="rail-tip" />
-            <Link
-              href="/members"
-              aria-label="로그인 (준비 중)"
-              data-tip="로그인"
-              className="rail-tip mt-1 grid size-7 place-items-center rounded-full bg-hover text-fg-3 transition-colors hover:bg-line hover:text-fg"
-            >
-              <UserIcon size={16} />
-            </Link>
+            <UserMenu placement="rail" />
           </div>
         </nav>
 
@@ -162,6 +168,7 @@ export function AppShell({
             <SearchIcon />
           </IconButton>
           <ThemeButton />
+          <UserMenu placement="top" />
           <IconButton
             label={sheetOpen ? "문서 트리 닫기" : "문서 트리 열기"}
             onClick={() => setSheetOpen((v) => !v)}
@@ -186,12 +193,9 @@ export function AppShell({
           aria-label="문서 트리"
         >
           <div className="px-2.5 pt-3.5 pb-6">
-            <div className="flex items-center gap-2 px-2 pt-0.5 pb-1.5">
-              <Link href="/" className="rounded text-[15px] font-bold text-fg">
-                가이드북
-              </Link>
-              <span className="ml-auto text-xs text-fg-3">문서 {docCount}</span>
-              <NewDocButton />
+            <div className="flex items-center gap-1.5 px-1 pt-0.5 pb-2.5">
+              <SpaceSwitcher space={space} count={docCount} />
+              {canSeeSpace && <NewDocButton compact />}
               <button
                 type="button"
                 onClick={() => setSheetOpen(false)}
@@ -201,7 +205,19 @@ export function AppShell({
                 <CloseIcon />
               </button>
             </div>
-            <ManagedTree nav={nav} onNavigate={() => setSheetOpen(false)} />
+            {canSeeSpace ? (
+              <ManagedTree nav={nav} space={space} onNavigate={() => setSheetOpen(false)} />
+            ) : (
+              <div className="mx-2 mt-2 rounded-lg border border-dashed border-lock-line bg-lock-bg px-3 py-4 text-center text-[13px] text-lock">
+                <LockIcon size={18} className="mx-auto mb-1.5" />
+                로그인한 부원만 볼 수 있어요
+                {me && !me.authenticated && (
+                  <a href={loginHref(pathname)} className="mx-auto mt-2.5 flex h-7 w-fit items-center rounded-md bg-lock px-3 text-[12.5px] font-semibold text-lock-fg">
+                    로그인
+                  </a>
+                )}
+              </div>
+            )}
             {editable && (
               <div className="mt-6 border-t border-line-2 px-2 pt-3 text-[13px]">
                 <Link
@@ -220,15 +236,6 @@ export function AppShell({
                 className="flex items-center gap-2 rounded-md py-1.5 text-fg-2"
               >
                 <ClockIcon size={16} /> 최근 바뀐 문서
-              </Link>
-              <Link
-                href="/members"
-                className="flex items-center gap-2 rounded-md py-1.5 text-fg-2"
-              >
-                <LockIcon size={16} /> 부원 공간
-                <span className="rounded bg-lock-bg px-1.5 text-[11px] font-semibold text-lock">
-                  부원만
-                </span>
               </Link>
             </div>
           </div>
@@ -282,11 +289,14 @@ function RailLink({
   href,
   label,
   active,
+  tone = "accent",
   children,
 }: {
   href: string;
   label: string;
   active: boolean;
+  /** 켜졌을 때 색 — 부원 공간은 보라(lock) */
+  tone?: "accent" | "lock";
   children: React.ReactNode;
 }) {
   return (
@@ -296,7 +306,7 @@ function RailLink({
       data-tip={label}
       aria-current={active ? "page" : undefined}
       className={`${railBtn} ${
-        active ? "bg-sel text-accent" : "text-fg-2 hover:bg-hover"
+        active ? (tone === "lock" ? "bg-lock-bg text-lock" : "bg-sel text-accent") : "text-fg-2 hover:bg-hover"
       }`}
     >
       {children}

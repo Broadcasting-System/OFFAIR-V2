@@ -22,7 +22,7 @@ const CALLOUT_LABEL: Record<string, string> = {
   warn: "주의",
   info: "정보",
   tip: "팁",
-  note: "메모",
+  note: "참고",
   danger: "경고",
 };
 
@@ -176,7 +176,7 @@ function jsx(el: MdxJsxFlowElement): RootContent | null {
   const kids = (el.children ?? []) as RootContent[];
   switch (el.name) {
     case "Callout": {
-      const label = CALLOUT_LABEL[attr(el, "type") ?? "note"] ?? "메모";
+      const label = CALLOUT_LABEL[attr(el, "type") ?? "note"] ?? "참고";
       const title = attr(el, "title");
       const body = render(kids);
       const lines = body ? body.split("\n") : [""];

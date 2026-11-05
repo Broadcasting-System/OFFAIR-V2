@@ -47,7 +47,7 @@ export interface ToolbarActions {
   insertBox(k: BoxKind): void;
   insertTable(rows: number, cols: number, header: boolean): void;
   tableOp(op: string): void;
-  insertImage(how: "file" | "url"): void;
+  insertImage(how: "file" | "library" | "url"): void;
   insertSteps(): void;
   more(key: string): void;
   toggleComment(): void;
@@ -462,11 +462,11 @@ export const Toolbar = forwardRef<ToolbarHandle, Props>(function Toolbar({ state
               "image",
               e.currentTarget,
               [
-                { key: "file", name: "파일에서 올리기", icon: "upload" },
+                { key: "file", name: "내 컴퓨터에서", icon: "upload" },
+                { key: "library", name: "올린 파일에서 고르기", icon: "file" },
                 { key: "url", name: "주소로 넣기", icon: "link" },
-                { key: "library", name: "올린 파일에서 고르기", icon: "file", desc: "저장소 연결 후", disabled: true },
               ],
-              pick((it) => actions.insertImage(it.key as "file" | "url")),
+              pick((it) => actions.insertImage(it.key as "file" | "library" | "url")),
             )
           }
         >

@@ -48,7 +48,7 @@ export function MediaDemo({ open, tab, theme: theme0 }: { open?: string; tab?: s
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "32px 16px", display: "grid", gap: 16 }}>
         <h1 style={{ fontSize: 24, margin: 0 }}>미디어 컴포넌트 데모 (개발 전용)</h1>
         <p style={{ margin: 0, color: "var(--wm-fg-2)" }}>
-          공간 <code>{SPACE}</code> · 문서 <code>{DOC}</code> · 올린 파일은 <code>public/uploads/dev/{SPACE}/</code>
+          공간 <code>{SPACE}</code> · 문서 <code>{DOC}</code> · 올린 파일은 위키 업로드 API(<code>/api/wiki/{SPACE}/uploads</code>)로 — 편집 권한(OFFAIR_DEV_ROLE)이 있어야 올라가요
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="wm-btn wm-pri" data-open="dialog" onClick={() => setDialog("upload")}>

@@ -3,6 +3,7 @@ import { ArrowRightIcon } from "@/components/shell/icons";
 import Link from "next/link";
 import { CodeBlock } from "./copy-button";
 import { Figure } from "./figure";
+import { YouTube } from "./youtube";
 
 /* ───────────────────────── Callout / Tip block ───────────────────────── */
 
@@ -222,6 +223,7 @@ export const mdxComponents: MDXComponents = {
   Kbd,
   Badge,
   Figure,
+  YouTube,
   // element overrides
   a: Anchor,
   h2: anchored("h2"),

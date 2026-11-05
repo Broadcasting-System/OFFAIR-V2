@@ -10,6 +10,9 @@ export interface Me {
   name: string;
   memberId: string | null;
   authenticated: boolean;
+  /** ONAIR 기수 ("4") · 역할 이름 ("부장") — 모르면 null */
+  cohort?: string | null;
+  roleLabel?: string | null;
   canEdit: boolean;
   canReadMembers: boolean;
   canComment: boolean;

@@ -28,6 +28,7 @@ import { mdxToMarkdown } from "mdast-util-mdx";
 import { gfmToMarkdown } from "mdast-util-gfm";
 import { stringifyFrontmatter, type DocMetaFields } from "./frontmatter";
 import type { ExtraAttr } from "./schema";
+import { parseYouTube } from "@/lib/media/url";
 
 /* 우리만 쓰는 mdast 노드: 원문 그대로 내보낸다 */
 interface RawNode extends Literal {
@@ -141,7 +142,13 @@ function block(n: JSONContent, ctx: BCtx): RootContent | null {
         type: "paragraph",
         children: [{ type: "image", url: String(a.src ?? ""), alt: (a.alt as string) ?? "", title: (a.title as string) || null }],
       };
-    case "youtube":
+    case "youtube": {
+      const ref = parseYouTube(String(a.url ?? ""));
+      if (ref) {
+        const start = typeof a.start === "number" && a.start > 0 ? Math.round(a.start) : ref.start ?? null;
+        return jsxFlow("YouTube", [["id", ref.id], ["start", start], ["title", a.title ? String(a.title) : null]], null, []);
+      }
+      // 유튜브 주소로 못 읽으면 예전 약속(링크)으로 남긴다 — 글자가 사라지지 않게
       return {
         type: "paragraph",
         children: [
@@ -153,6 +160,7 @@ function block(n: JSONContent, ctx: BCtx): RootContent | null {
           },
         ],
       };
+    }
     case "callout":
       return jsxFlow("Callout", [["type", a.type], ["title", a.title]], a.extraAttrs, flowChildren(n.content));
     case "steps":
@@ -171,6 +179,7 @@ function block(n: JSONContent, ctx: BCtx): RootContent | null {
           ["src", a.src ?? ""],
           ["alt", a.alt ?? ""],
           ["caption", a.caption],
+          ["sidecar", a.sidecar],
           ["width", a.width],
           ["height", a.height],
           ["static", a.static ? true : null],

@@ -11,6 +11,8 @@ interface FigureProps {
   height?: number;
   /** 클릭 확대 끄기 */
   static?: boolean;
+  /** 표시 달기 사이드카 주소 — 편집기가 다시 고칠 때만 쓴다. 읽기 화면에서는 무시 */
+  sidecar?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function Figure({
   height = 720,
   static: noZoom = false,
 }: FigureProps) {
+  // sidecar 는 일부러 받지 않는다 (편집기 전용 정보)
   const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);

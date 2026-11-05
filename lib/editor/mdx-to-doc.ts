@@ -5,6 +5,7 @@
  * 원래 글자 그대로 rawBlock / rawInline 에 담아 두었다가 저장할 때 그대로 돌려준다.
  */
 import type { JSONContent } from "@tiptap/core";
+import { youTubeWatchUrl } from "@/lib/media/url";
 import type {
   Root,
   RootContent,
@@ -124,7 +125,7 @@ function readAttrs(
 
 /* ───────────────────────── 블록 ───────────────────────── */
 
-const BLOCK_COMPONENTS = new Set(["Callout", "Steps", "Step", "Figure", "CardGrid", "Card"]);
+const BLOCK_COMPONENTS = new Set(["Callout", "Steps", "Step", "Figure", "CardGrid", "Card", "YouTube"]);
 
 function isBlank(n: RootContent): boolean {
   return n.type === "text" && !(n as { value: string }).value.trim();
@@ -275,7 +276,7 @@ function jsxBlock(el: MdxJsxFlowElement, ctx: Ctx): JSONContent {
       return { type: "steps", attrs: { extraAttrs: r.extra }, content: steps };
     }
     case "Figure": {
-      const r = readAttrs(el, { src: "string", alt: "string", caption: "string", width: "number", height: "number", static: "boolean" });
+      const r = readAttrs(el, { src: "string", alt: "string", caption: "string", sidecar: "string", width: "number", height: "number", static: "boolean" });
       if (!r.ok || jsxChildren(el).length || typeof r.known.src !== "string") return raw();
       return {
         type: "figure",
@@ -283,11 +284,22 @@ function jsxBlock(el: MdxJsxFlowElement, ctx: Ctx): JSONContent {
           src: r.known.src,
           alt: (r.known.alt as string | undefined) ?? "",
           caption: (r.known.caption as string | undefined) ?? null,
+          sidecar: (r.known.sidecar as string | undefined) ?? null,
           width: (r.known.width as number | undefined) ?? null,
           height: (r.known.height as number | undefined) ?? null,
           static: Boolean(r.known.static),
           extraAttrs: r.extra,
         },
+      };
+    }
+    case "YouTube": {
+      const r = readAttrs(el, { id: "string", start: "number", title: "string" });
+      const id = r.known.id as string | undefined;
+      if (!r.ok || r.extra || jsxChildren(el).length || !id || !/^[A-Za-z0-9_-]{11}$/.test(id)) return raw();
+      const start = (r.known.start as number | undefined) ?? null;
+      return {
+        type: "youtube",
+        attrs: { url: youTubeWatchUrl({ id, start: start ?? undefined }), title: (r.known.title as string | undefined) ?? "", start },
       };
     }
     case "CardGrid": {

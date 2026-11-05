@@ -117,6 +117,14 @@ export function DocTree({
     );
   }
 
+  if (groups.length === 0) {
+    return (
+      <nav aria-label="문서 트리">
+        <p className="mx-2 mt-2 rounded-md border border-dashed border-line px-3 py-4 text-center text-[13px] text-fg-3">아직 문서가 없어요</p>
+      </nav>
+    );
+  }
+
   return (
     <nav aria-label="문서 트리">
       {groups.map((g) => (

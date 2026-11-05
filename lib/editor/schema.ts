@@ -128,6 +128,8 @@ export const Figure = Node.create({
       src: jsonAttr<string>("src", ""),
       alt: jsonAttr<string>("alt", ""),
       caption: jsonAttr<string | null>("caption", null),
+      /** 표시 달기로 만든 그림이면 사이드카(이름.marks.json) 주소 — 다시 고칠 때 쓴다 */
+      sidecar: jsonAttr<string | null>("sidecar", null),
       width: jsonAttr<number | null>("width", null),
       height: jsonAttr<number | null>("height", null),
       static: jsonAttr<boolean>("static", false),
@@ -182,7 +184,10 @@ export const Card = Node.create({
   },
 });
 
-/** 유튜브 영상 — 지금은 `[제목](주소 "youtube")` 링크로 저장한다 (사이트에 영상 컴포넌트가 생기면 바꾼다) */
+/**
+ * 유튜브 영상 — `<YouTube id="…" start={30} title="…" />` 로 저장한다 (components/mdx/youtube.tsx).
+ * 예전 약속 `[제목](주소 "youtube")` 도 읽어서 이 블록으로 연다.
+ */
 export const Youtube = Node.create({
   name: "youtube",
   group: "block",
@@ -192,6 +197,8 @@ export const Youtube = Node.create({
     return {
       url: jsonAttr<string>("url", ""),
       title: jsonAttr<string>("title", ""),
+      /** 시작 위치(초). 없으면 주소의 t= 를 쓴다 */
+      start: jsonAttr<number | null>("start", null),
     };
   },
   parseHTML() {

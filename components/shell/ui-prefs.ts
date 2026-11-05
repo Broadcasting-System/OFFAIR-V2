@@ -91,6 +91,30 @@ export function toggleTheme() {
   emit();
 }
 
+/** 테마 고르기 방식: 기기 따라가기 / 늘 라이트 / 늘 다크 */
+export type ThemeMode = "system" | "light" | "dark";
+
+export function getThemeMode(): ThemeMode {
+  const t = document.documentElement.getAttribute("data-theme");
+  return t === "dark" || t === "light" ? t : "system";
+}
+
+export function setThemeMode(mode: ThemeMode) {
+  const root = document.documentElement;
+  if (mode === "system") {
+    root.removeAttribute("data-theme");
+    save(THEME_KEY, null);
+  } else {
+    root.setAttribute("data-theme", mode);
+    save(THEME_KEY, mode);
+  }
+  emit();
+}
+
+export function useThemeMode(): ThemeMode | null {
+  return useSyncExternalStore<ThemeMode | null>(subscribeTheme, getThemeMode, () => null);
+}
+
 function subscribeTheme(cb: () => void) {
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   mq.addEventListener("change", cb);

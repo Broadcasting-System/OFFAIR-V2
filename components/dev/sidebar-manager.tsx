@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CloseIcon, ExternalIcon } from "@/components/shell/icons";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,

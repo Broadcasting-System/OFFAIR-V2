@@ -161,6 +161,32 @@ describe("블록 기타", () => {
     expect(types(src)).toEqual(["youtube"]);
     same(src);
   });
+  it("<YouTube id start title /> 는 유튜브 블록으로 왕복", () => {
+    const src = '<YouTube id="dQw4w9WgXcQ" start={30} title="사용법 영상" />\n';
+    expect(types(src)).toEqual(["youtube"]);
+    const node = bodyToDoc(src).content![0];
+    expect(node.attrs).toMatchObject({ url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s", title: "사용법 영상", start: 30 });
+    same(src);
+    same('<YouTube id="dQw4w9WgXcQ" />\n');
+  });
+  it("예전 유튜브 링크(올바른 주소)는 열었다 저장하면 <YouTube /> 로", () => {
+    expect(rt('[소개 영상](https://youtu.be/dQw4w9WgXcQ?t=90 "youtube")\n')).toBe('<YouTube id="dQw4w9WgXcQ" start={90} title="소개 영상" />\n');
+  });
+  it("편집기에서 넣은 유튜브 블록 → <YouTube />", () => {
+    const doc = { type: "doc", content: [{ type: "youtube", attrs: { url: "https://www.youtube.com/shorts/dQw4w9WgXcQ", title: "", start: null } }] };
+    expect(docToBody(doc)).toBe('<YouTube id="dQw4w9WgXcQ" />\n');
+  });
+  it("모양이 이상한 <YouTube> 는 원문 블록으로 보관", () => {
+    expect(types('<YouTube id="짧음" />\n')).toEqual(["rawBlock"]);
+    same('<YouTube id="짧음" />\n');
+  });
+  it("Figure 의 sidecar(표시 달기)는 속성으로 읽고 그대로 쓴다", () => {
+    const src = '<Figure src="/uploads/2026-11/a-1f2e3d.webp" alt="시보" caption="① 그룹 탭" sidecar="/uploads/2026-11/a-1f2e3d.marks.json" width={1280} height={720} />\n';
+    const node = bodyToDoc(src).content![0];
+    expect(node.type).toBe("figure");
+    expect(node.attrs).toMatchObject({ sidecar: "/uploads/2026-11/a-1f2e3d.marks.json", caption: "① 그룹 탭" });
+    same(src);
+  });
   it("빈 문서", () => {
     expect(docToBody({ type: "doc", content: [{ type: "paragraph" }] })).toBe("");
     expect(bodyToDoc("")).toEqual({ type: "doc", content: [{ type: "paragraph" }] });

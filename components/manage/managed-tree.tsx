@@ -18,7 +18,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import type { NavGroup } from "@/lib/content";
 import { canEditNow, TREE_CHANGED_EVENT, useMe } from "@/lib/wiki/client";
-import { docFromPath, docHref } from "@/lib/wiki/links";
+import { docFromPath, docHref, type SpaceKey } from "@/lib/wiki/links";
 import {
   buildForest,
   findNode,
@@ -38,6 +38,7 @@ import {
   duplicateDoc,
   loadTree,
   moveDoc,
+  treeSpace,
   removeCategory,
   renameCategory,
   renameDoc,
@@ -54,10 +55,33 @@ import {
  *  - 키보드: 손잡이에서 ⌥↑/⌥↓ 위아래, ⌥→ 위 문서 안으로, ⌥← 밖으로, F2 이름 바꾸기
  * 읽기만 하는 사람은 예전 그대로의 트리(DocTree).
  */
-export function ManagedTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () => void }) {
+export function ManagedTree({ nav, space = "guide", onNavigate }: { nav: NavGroup[]; space?: SpaceKey; onNavigate?: () => void }) {
   const me = useMe();
-  if (!canEditNow(me)) return <DocTree nav={nav} onNavigate={onNavigate} />;
-  return <EditableTree nav={nav} onNavigate={onNavigate} />;
+  if (!canEditNow(me)) {
+    // 가이드북은 서버가 그린 트리, 부원 공간은 API 로 받는다 (정적 HTML 에 부원 문서가 들어가지 않게)
+    if (space === "guide") return <DocTree nav={nav} onNavigate={onNavigate} />;
+    return <FetchedTree space={space} onNavigate={onNavigate} />;
+  }
+  return <EditableTree key={space} nav={space === "guide" ? nav : []} space={space} onNavigate={onNavigate} />;
+}
+
+/** 읽기만 하는 사람의 부원 공간 트리 (API 로 받아 DocTree 로 그린다) */
+function FetchedTree({ space, onNavigate }: { space: SpaceKey; onNavigate?: () => void }) {
+  const { groups } = useTree();
+  useEffect(() => {
+    void loadTree(space).catch(() => undefined);
+  }, [space]);
+  const nav = useMemo<NavGroup[]>(
+    () =>
+      (treeSpace() === space ? groups ?? [] : []).map((g, i) => ({
+        category: g.category,
+        order: i,
+        items: g.items.map((d, j) => ({ slug: d.slug, url: docHref(space, d.slug), title: d.title, description: "", category: g.category, order: j })),
+      })),
+    [groups, space]
+  );
+  if (!groups) return <p className="px-2 py-3 text-[13px] text-fg-3">불러오는 중…</p>;
+  return <DocTree nav={nav.filter((g) => g.items.length > 0)} onNavigate={onNavigate} />;
 }
 
 function useNav(): Nav {
@@ -69,7 +93,7 @@ function useNav(): Nav {
 }
 
 /** 서랍 머리의 "＋ 새 문서" — 지금 보는 문서의 카테고리(없으면 첫 카테고리) 맨 끝에 */
-export function NewDocButton() {
+export function NewDocButton({ compact = false }: { compact?: boolean }) {
   const me = useMe();
   const nav = useNav();
   const pathname = usePathname();
@@ -87,9 +111,16 @@ export function NewDocButton() {
       type="button"
       onClick={onClick}
       disabled={busy}
-      className="inline-flex h-7 flex-none items-center gap-1 rounded-md border border-line bg-bg px-2.5 text-[12.5px] font-medium text-fg-2 transition-colors hover:bg-hover hover:text-fg disabled:opacity-60"
+      aria-label="새 문서"
+      title="새 문서  N"
+      className={
+        compact
+          ? "grid size-[42px] flex-none place-items-center rounded-lg border border-line bg-bg text-fg-2 transition-colors hover:bg-hover hover:text-fg disabled:opacity-60"
+          : "inline-flex h-7 flex-none items-center gap-1 rounded-md border border-line bg-bg px-2.5 text-[12.5px] font-medium text-fg-2 transition-colors hover:bg-hover hover:text-fg disabled:opacity-60"
+      }
     >
-      <PlusIcon size={14} />새 문서
+      <PlusIcon size={compact ? 17 : 14} />
+      {!compact && "새 문서"}
     </button>
   );
 }
@@ -115,10 +146,11 @@ function fromNav(nav: NavGroup[]): TGroup[] {
   return nav.map((g) => ({ category: g.category, items: g.items.map((d) => ({ slug: d.slug, title: d.title })) }));
 }
 
-function EditableTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () => void }) {
+function EditableTree({ nav, space, onNavigate }: { nav: NavGroup[]; space: SpaceKey; onNavigate?: () => void }) {
   const pathname = usePathname();
   const navOps = useNav();
-  const { groups: loaded, highlight, busy } = useTree();
+  const { groups: loadedAny, highlight, busy } = useTree();
+  const loaded = treeSpace() === space ? loadedAny : null;
   const groups = loaded ?? fromNav(nav);
   const containerRef = useRef<HTMLDivElement>(null);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
@@ -137,14 +169,14 @@ function EditableTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () =>
   } | null>(null);
   const pendingFocus = useRef<string | null>(null);
   const current = docFromPath(pathname);
-  const currentKey = current?.space === "guide" ? current.slug.join("/") : null;
+  const currentKey = current?.space === space ? current.slug.join("/") : null;
 
   useEffect(() => {
-    void loadTree().catch(() => undefined);
-    const onChange = () => void loadTree().catch(() => undefined);
+    void loadTree(space).catch(() => undefined);
+    const onChange = () => void loadTree(space).catch(() => undefined);
     window.addEventListener(TREE_CHANGED_EVENT, onChange);
     return () => window.removeEventListener(TREE_CHANGED_EVENT, onChange);
-  }, []);
+  }, [space]);
 
   // 옮긴 뒤 손잡이로 포커스를 돌려준다 (키보드로 이어서 옮길 수 있게)
   useEffect(() => {
@@ -208,7 +240,7 @@ function EditableTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () =>
         label: "주소 복사",
         icon: <LinkIcon size={15} />,
         run: () => {
-          const url = window.location.origin + docHref("guide", slug);
+          const url = window.location.origin + docHref(space, slug);
           navigator.clipboard?.writeText(url).then(
             () => toast({ message: "주소를 복사했어요" }),
             () => toast({ message: url })
@@ -350,7 +382,7 @@ function EditableTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () =>
           const isNew = key === highlight;
           const isDragging = !!drag?.moving.has(key);
           const dropInside = drag?.inside === key;
-          const url = docHref("guide", node.doc.slug);
+          const url = docHref(space, node.doc.slug);
           return (
             <li key={key}>
               <div
@@ -449,6 +481,19 @@ function EditableTree({ nav, onNavigate }: { nav: NavGroup[]; onNavigate?: () =>
 
   return (
     <nav aria-label="문서 트리 (관리)" className="relative" ref={containerRef} aria-busy={busy}>
+      {loaded && forests.every((g) => g.count === 0) && (
+        <div className="mx-2 mt-2 mb-3 rounded-md border border-dashed border-line px-3 py-4 text-center text-[13px] text-fg-3">
+          아직 문서가 없어요
+          <button
+            type="button"
+            onClick={() => void createDoc(navOps, { category: forests[0]?.category ?? "문서" })}
+            disabled={busy}
+            className="mx-auto mt-2 flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-[12.5px] font-semibold text-accent-fg hover:bg-accent-hover disabled:opacity-60"
+          >
+            <PlusIcon size={14} />새 문서
+          </button>
+        </div>
+      )}
       {forests.map((g) => (
         <section key={g.category} className="mt-3.5 first:mt-1">
           <div data-cat-head={g.category} className="group/row mx-2 mb-1 flex min-h-[22px] items-center gap-1">

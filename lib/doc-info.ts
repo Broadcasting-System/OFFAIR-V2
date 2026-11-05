@@ -1,35 +1,30 @@
 import "server-only";
 import fs from "node:fs";
-import path from "node:path";
-import matter from "gray-matter";
-import { getAllDocMeta, type DocMeta } from "@/lib/content";
+import { getAllDocMeta, spaceOf, type ContentSpace, type DocMeta } from "@/lib/content";
 
 /**
- * 문서 화면에 보여 줄 부가 정보(수정일 · 작성자 · 읽는 시간).
+ * 문서 화면에 보여 줄 부가 정보(마지막 수정 · 고친 사람 · 읽는 시간).
  *
- * 지금은 파일 기반이라 수정일 = .mdx 파일의 mtime, 작성자 = frontmatter 의
- * `author`(없으면 생략). 위키 저장소가 붙으면 이 파일만 저장소 값으로 바꾸면 된다.
+ * 마지막 수정은 공간 저장소의 git 이력(그 파일을 마지막으로 바꾼 커밋)에서 읽고,
+ * git 이 없으면 파일 시각을 쓴다. 고친 사람은 그 커밋의 작성자, 없으면 frontmatter `author`.
  */
-
-const DOCS_DIR = path.join(process.cwd(), "content", "docs");
 
 export interface DocFileInfo {
   updatedAt: Date | null;
   author: string | null;
 }
 
-export function getDocFileInfo(slug: string[]): DocFileInfo {
-  const file = path.join(DOCS_DIR, ...slug) + ".mdx";
+export async function getDocInfo(space: ContentSpace, doc: { path: string; slug: string[] }): Promise<DocFileInfo> {
+  const sp = spaceOf(space);
+  if (!sp) return { updatedAt: null, author: null };
+  const last = await sp.git.lastCommit(doc.path).catch(() => null);
+  if (last) return { updatedAt: new Date(last.date), author: last.author || null };
+  const d = sp.getDoc(doc.slug);
+  const fmAuthor = typeof d?.frontmatter.author === "string" && d.frontmatter.author.trim() ? d.frontmatter.author.trim() : null;
   try {
-    const stat = fs.statSync(file);
-    const { data } = matter(fs.readFileSync(file, "utf8"));
-    const author =
-      typeof data.author === "string" && data.author.trim()
-        ? data.author.trim()
-        : null;
-    return { updatedAt: stat.mtime, author };
+    return { updatedAt: fs.statSync(sp.absOf(doc.path)).mtime, author: fmAuthor };
   } catch {
-    return { updatedAt: null, author: null };
+    return { updatedAt: null, author: fmAuthor };
   }
 }
 
@@ -72,10 +67,19 @@ export interface RecentDoc extends DocMeta {
   updatedAt: Date | null;
 }
 
-/** 파일 수정 시각이 최근인 순서. */
-export function getRecentDocs(limit?: number): RecentDoc[] {
-  const list = getAllDocMeta()
-    .map((d) => ({ ...d, updatedAt: getDocFileInfo(d.slug).updatedAt }))
+/** 파일 수정 시각이 최근인 순서 (목록은 git 을 문서마다 부르지 않고 파일 시각으로). */
+export function getRecentDocs(limit?: number, space: ContentSpace = "guide"): RecentDoc[] {
+  const sp = spaceOf(space);
+  if (!sp) return [];
+  const mtime = (d: DocMeta) => {
+    try {
+      return fs.statSync(sp.absOf(sp.relOf(d.slug))).mtime;
+    } catch {
+      return null;
+    }
+  };
+  const list = getAllDocMeta(space)
+    .map((d) => ({ ...d, updatedAt: mtime(d) }))
     .sort(
       (a, b) =>
         (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0) ||

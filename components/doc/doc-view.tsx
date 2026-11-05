@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/components/shell/icons";
-import type { Doc, DocMeta } from "@/lib/content";
-import { formatDate, getDocFileInfo, readingMinutes } from "@/lib/doc-info";
+import type { ContentSpace, Doc, DocMeta } from "@/lib/content";
+import { formatDate, getDocInfo, readingMinutes } from "@/lib/doc-info";
+import { SPACE_LABEL } from "@/lib/wiki/links";
+import { MembersBand } from "@/components/members/band";
 import { PageBar } from "@/components/shell/page-bar";
 import { TocCard } from "@/components/toc";
 import { SiteFooter } from "@/components/site-footer";
@@ -23,31 +25,36 @@ import {
  * 본문 · 이전/다음) + 오른쪽 위 떠 있는 목차 카드. 기록을 열면 오른쪽에 수정 기록 패널이
  * 붙고, 버전을 고르면 본문 자리에 바뀐 곳을 표시한 비교 화면이 나온다.
  */
-export function DocView({
+export async function DocView({
   doc,
   prev,
   next,
+  space = "guide",
   children,
 }: {
   doc: Doc;
   prev: DocMeta | null;
   next: DocMeta | null;
+  /** 부원 공간이면 위에 보라색 띠, 빵부스러기는 "부원 공간" */
+  space?: ContentSpace;
   children: React.ReactNode;
 }) {
-  const info = getDocFileInfo(doc.slug);
+  const info = await getDocInfo(space, doc);
   const minutes = readingMinutes(doc.body);
+  const home = space === "guide" ? "/" : "/members";
 
   return (
-    <HistoryProvider space="guide" slug={doc.slug}>
-      <CommentsProvider space="guide" slug={doc.slug}>
+    <HistoryProvider space={space} slug={doc.slug}>
+      <CommentsProvider space={space} slug={doc.slug}>
+        {space === "members" && <MembersBand />}
         <PageBar
-          crumbs={[{ label: "가이드북", href: "/" }, { label: doc.category }]}
+          crumbs={[{ label: SPACE_LABEL[space], href: home }, { label: doc.category }]}
           toc={doc.toc}
           actions={
             <>
               <CommentsButton />
               <HistoryButton />
-              <EditLink space="guide" slug={doc.slug} />
+              <EditLink space={space} slug={doc.slug} />
             </>
           }
         />
@@ -115,7 +122,7 @@ export function DocView({
 
         <TocCard items={doc.toc} />
         <RecordVisit
-          space="guide"
+          space={space}
           url={doc.url}
           title={doc.title}
           category={doc.category}

@@ -65,6 +65,8 @@ export interface UploadOptions {
   /** 브라우저가 이미 아는 그림 크기 (서버가 다시 읽지 않도록) */
   width?: number;
   height?: number;
+  /** 표시 달기 보조 파일(이름.base.webp·이름.marks.json)이면 본 그림 주소 — 서버가 그 옆에 이름을 맞춰 둔다 */
+  of?: string;
 }
 
 export interface ListOptions {

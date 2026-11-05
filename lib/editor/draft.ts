@@ -43,3 +43,30 @@ export function hhmm(t: number): string {
   const d = new Date(t);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+
+export interface DraftEntry extends Draft {
+  space: string;
+  path: string;
+  /** 초안 머리말의 제목 (없으면 경로 끝) */
+  title: string;
+}
+
+/** 이 브라우저에 남은 모든 초안 (최근 것 먼저) — 내 메뉴의 "내 초안" */
+export function listDrafts(): DraftEntry[] {
+  const out: DraftEntry[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const m = k && /^offair:draft:([^:]+):(.+)$/.exec(k);
+      if (!m) continue;
+      const d = loadDraft(m[1], m[2]);
+      if (!d) continue;
+      const t = /^title:\s*(.+)$/m.exec(d.mdx.split(/\n---\s*\n/)[0] ?? "");
+      const title = (t?.[1] ?? "").trim().replace(/^(["'])(.*)\1$/, "$2") || m[2].split("/").pop() || m[2];
+      out.push({ ...d, space: m[1], path: m[2], title });
+    }
+  } catch {
+    /* 저장소를 못 쓰는 브라우저 */
+  }
+  return out.sort((a, b) => b.savedAt - a.savedAt);
+}

@@ -143,7 +143,7 @@ CUE(ONAIR 서버 안의 Python 도우미)가 질문에 답할 때 최신 문서�
 
 | MDX | text |
 | --- | --- |
-| `<Callout type="warn" title="T">본문</Callout>` | `> [주의] T: 본문` (줄마다 `>`; 종류: warn 주의·info 정보·tip 팁·note 메모·danger 경고) |
+| `<Callout type="warn" title="T">본문</Callout>` | `> [주의] T: 본문` (줄마다 `>`; 종류: warn 주의·info 정보·tip 팁·note 참고·danger 경고) |
 | `<Steps><Step title="A">…</Step></Steps>` | `1. **A**` + 3칸 들여 쓴 본문 |
 | `<Figure caption="C" alt="A" />` | `[그림: C (A)]` (하나만 있으면 그것만) |
 | `<CardGrid><Card title="T" href="/x">설명</Card></CardGrid>` | `- T — /x · 설명` |

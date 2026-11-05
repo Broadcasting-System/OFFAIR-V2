@@ -13,6 +13,7 @@ import { useEditorUi } from "./context";
 import { pickFile, baseName } from "./upload";
 import { parseMarkdown } from "@/lib/editor/mdast";
 import { youtubeId } from "./insert";
+import { parseYouTube } from "@/lib/media/url";
 import { CALLOUT_TYPES, type CalloutType } from "@/lib/editor/schema";
 
 /* ───────────── 공용 ───────────── */
@@ -275,29 +276,48 @@ export function CardView(props: NodeViewProps) {
 export function FigureView(props: NodeViewProps) {
   const { node, updateAttributes, editor, selected, deleteNode } = props;
   const ui = useEditorUi();
-  const { src, alt, caption, width, height } = node.attrs as {
+  const { src, alt, caption, width, height, sidecar } = node.attrs as {
     src: string;
     alt: string;
     caption: string | null;
     width: number | null;
     height: number | null;
+    sidecar: string | null;
   };
   const replace = async () => {
+    if (ui.pickImage) {
+      const got = await ui.pickImage();
+      if (got) updateAttributes({ src: got.src, alt: alt || got.alt, caption: got.caption ?? caption, sidecar: got.sidecar, width: got.width, height: got.height });
+      return;
+    }
     const file = await pickFile("image/*");
     if (!file) return;
     const up = await ui.uploadImage(file);
-    if (up) updateAttributes({ src: up.url, width: up.width, height: up.height, alt: alt || baseName(file.name) });
+    if (up) updateAttributes({ src: up.url, width: up.width, height: up.height, alt: alt || baseName(file.name), sidecar: null });
+  };
+  // 같은 사이트에 올린 그림만 표시를 달 수 있다 (바깥 주소는 캔버스로 내보낼 수 없다)
+  const canAnnotate = !!ui.annotate && !!src && src.startsWith("/");
+  const annotate = async () => {
+    if (!ui.annotate) return;
+    const name = decodeURIComponent(src.split("/").pop() || "그림.webp");
+    const r = await ui.annotate({ src, sidecar, name });
+    if (r) updateAttributes({ src: r.src, sidecar: r.sidecar, caption: r.caption ?? caption, width: r.width, height: r.height, alt: alt || r.caption || alt });
   };
   const num = (v: string) => (v.trim() && /^\d+$/.test(v.trim()) ? Number(v) : null);
   return (
     <NodeViewWrapper className={`we-figure${selected ? " is-selected" : ""}`} data-drag-handle="">
       <div className="we-figure-frame">
+        {sidecar && (
+          <span className="we-figure-tag" contentEditable={false} data-cmt-ui="">
+            표시
+          </span>
+        )}
         {src ? (
           // 편집 화면에서는 next/image 대신 그냥 img (주소가 바로 바뀌어야 해서)
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={alt} draggable={false} />
         ) : (
-          <button type="button" className="we-figure-empty" contentEditable={false} onClick={replace} disabled={!editor.isEditable}>
+          <button type="button" className="we-figure-empty" contentEditable={false} onClick={() => void replace()} disabled={!editor.isEditable}>
             <Icon name="upload" /> 이미지를 끌어 놓거나 눌러서 고르세요
           </button>
         )}
@@ -312,7 +332,7 @@ export function FigureView(props: NodeViewProps) {
         onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
       />
       {editor.isEditable && (
-        <div className="we-figure-tools" contentEditable={false}>
+        <div className="we-figure-tools" contentEditable={false} data-cmt-ui="">
           <label>
             대체 텍스트
             <input value={alt} onChange={(e) => updateAttributes({ alt: e.target.value })} placeholder="그림 설명" />
@@ -328,7 +348,12 @@ export function FigureView(props: NodeViewProps) {
             확대 끄기
           </label>
           <span className="we-sp" />
-          <button type="button" onClick={replace}>
+          {canAnnotate && (
+            <button type="button" onClick={() => void annotate()} title={sidecar ? "달아 둔 번호·상자·가리기를 이어서 고쳐요" : "번호·상자·화살표·가리기를 그려 넣어요"}>
+              <Icon name="mark" size={14} /> {sidecar ? "표시 고치기" : "표시 달기"}
+            </button>
+          )}
+          <button type="button" onClick={() => void replace()}>
             <Icon name="upload" size={14} /> 바꾸기
           </button>
           <button type="button" className="is-danger" onClick={() => deleteNode()}>
@@ -344,13 +369,15 @@ export function FigureView(props: NodeViewProps) {
 
 export function YoutubeView(props: NodeViewProps) {
   const { node, updateAttributes, editor, selected } = props;
-  const id = youtubeId(node.attrs.url ?? "");
+  const ref = parseYouTube(node.attrs.url ?? "");
+  const id = ref?.id ?? youtubeId(node.attrs.url ?? "");
+  const start = (node.attrs.start as number | null) ?? ref?.start ?? null;
   return (
     <NodeViewWrapper className={`we-youtube${selected ? " is-selected" : ""}`} data-drag-handle="">
       <div className="we-youtube-frame" contentEditable={false}>
         {id ? (
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`}
+            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}${start ? `?start=${start}` : ""}`}
             title={node.attrs.title || "유튜브 영상"}
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -365,7 +392,7 @@ export function YoutubeView(props: NodeViewProps) {
         className="we-figure-caption"
         onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
         value={node.attrs.title ?? ""}
-        placeholder="영상 제목 (게시본에는 이 제목의 링크로 나와요)"
+        placeholder="영상 제목 (화면 읽기·검색에 쓰여요, 게시본에는 영상 아래 캡션)"
         aria-label="영상 제목"
         disabled={!editor.isEditable}
         onChange={(e) => updateAttributes({ title: e.target.value })}
