@@ -111,6 +111,31 @@ describe("글자 서식", () => {
   });
   it("링크 제목", () => same('[가이드](/docs/intro "소개")\n'));
   it("짝 없는 ~ 는 이스케이프하지 않는다", () => same("GROUP 1~5 탭\n"));
+});
+
+describe("물결 하나는 취소선이 아니다 (singleTilde: false)", () => {
+  const marksOf = (body: string) =>
+    JSON.stringify(bodyToDoc(body))
+      .match(/"type":"strike"/g)?.length ?? 0;
+  it("1~4 는 글자 그대로", () => {
+    expect(marksOf("1~4번 채널\n")).toBe(0);
+    same("1~4번 채널\n");
+  });
+  it("한 문단에 물결 둘 (~a~ 꼴)도 취소선 아님", () => {
+    expect(marksOf("3~4초, 5~6초 기다려요\n")).toBe(0);
+    same("3~4초, 5~6초 기다려요\n");
+    expect(marksOf("~하나~\n")).toBe(0);
+  });
+  it("~~두 개~~ 는 취소선", () => {
+    expect(marksOf("~~지움~~\n")).toBe(1);
+    same("~~지움~~ 그리고 1~2\n");
+  });
+  it("글자 안의 ~~ 는 이스케이프해서 취소선이 되지 않게", () => {
+    const doc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "a ~~b~~ c" }] }] };
+    const out = docToBody(doc);
+    expect(marksOf(out)).toBe(0);
+    expect(docToBody(checkDoc(bodyToDoc(out)))).toBe(out);
+  });
   it("문단 안 줄바꿈은 띄어쓰기로 (렌더 결과 같음)", () => expect(rt("첫 줄\n둘째 줄\n")).toBe("첫 줄 둘째 줄\n"));
   it("굵게 끝 공백은 바깥으로", () => {
     const doc = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "굵게 ", marks: [{ type: "bold" }] }, { type: "text", text: "보통" }] }] };

@@ -1,5 +1,5 @@
 import { diffArrays } from "diff";
-import remarkGfm from "remark-gfm";
+import { GFM_OPTIONS, remarkGfm } from "@/lib/gfm";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -46,7 +46,7 @@ interface MdNode {
   value?: string;
 }
 
-const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMdx);
+const processor = unified().use(remarkParse).use(remarkGfm, GFM_OPTIONS).use(remarkMdx);
 
 function parseBlocks(src: string): MdNode[] | null {
   try {

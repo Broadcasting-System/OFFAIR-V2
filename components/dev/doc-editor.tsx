@@ -72,7 +72,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
           ]);
         const { default: Content } = await evaluate(stripFrontmatter(source), {
           ...runtime,
-          remarkPlugins: [remarkGfm],
+          remarkPlugins: [[remarkGfm, { singleTilde: false }]],
           rehypePlugins: [rehypeSlug],
         });
         if (!cancelled) {

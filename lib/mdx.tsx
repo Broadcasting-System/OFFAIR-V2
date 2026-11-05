@@ -1,7 +1,7 @@
 import "server-only";
 import { evaluate } from "@mdx-js/mdx";
 import * as runtime from "react/jsx-runtime";
-import remarkGfm from "remark-gfm";
+import { remarkGfmPlugin } from "@/lib/gfm";
 import rehypeSlug from "rehype-slug";
 import rehypePrettyCode, {
   type Options as PrettyCodeOptions,
@@ -23,7 +23,7 @@ const prettyCodeOptions: PrettyCodeOptions = {
 export async function MDX({ source }: { source: string }) {
   const { default: Content } = await evaluate(source, {
     ...runtime,
-    remarkPlugins: [remarkGfm],
+    remarkPlugins: [remarkGfmPlugin],
     rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
   });
 
@@ -38,7 +38,7 @@ export async function renderMdx(source: string): Promise<React.ReactNode | null>
   try {
     const { default: Content } = await evaluate(source, {
       ...runtime,
-      remarkPlugins: [remarkGfm],
+      remarkPlugins: [remarkGfmPlugin],
       rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
     });
     return <Content components={mdxComponents} />;

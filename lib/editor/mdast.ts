@@ -1,11 +1,11 @@
 /**
- * MDX ↔ mdast 처리기. 사이트 렌더러(lib/mdx.tsx: @mdx-js/mdx + remark-gfm)와
+ * MDX ↔ mdast 처리기. 사이트 렌더러(lib/mdx.tsx: @mdx-js/mdx + remark-gfm, 설정은 lib/gfm.ts)와
  * 같은 문법으로 읽어야 편집기에서 본 것과 게시된 화면이 어긋나지 않는다.
  */
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkMdx from "remark-mdx";
-import remarkGfm from "remark-gfm";
+import { GFM_OPTIONS, remarkGfm } from "@/lib/gfm";
 import type { Root } from "mdast";
 import type {} from "mdast-util-mdx";
 
@@ -13,7 +13,7 @@ import type {} from "mdast-util-mdx";
 export function parseMarkdown(body: string, opts: { mdx?: boolean } = {}): Root {
   const mdx = opts.mdx ?? true;
   const proc = mdx
-    ? unified().use(remarkParse).use(remarkMdx).use(remarkGfm)
-    : unified().use(remarkParse).use(remarkGfm);
+    ? unified().use(remarkParse).use(remarkMdx).use(remarkGfm, GFM_OPTIONS)
+    : unified().use(remarkParse).use(remarkGfm, GFM_OPTIONS);
   return proc.parse(body) as Root;
 }

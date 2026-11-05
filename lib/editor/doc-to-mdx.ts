@@ -427,13 +427,18 @@ function findHandler(ext: ToMarkdownOptions, name: string): Handle {
 }
 
 /**
- * 글자 처리기 — 기본 이스케이프를 쓰되, 짝이 없는 `~` 하나(예: "1~5")까지
- * `\~` 로 바꾸지는 않는다 (취소선은 `~` 두 개 이상이 있어야 생긴다).
+ * 글자 처리기 — 기본 이스케이프를 쓰되, 물결 하나(예: "1~5", "3~4초")는 `\~` 로 바꾸지 않는다.
+ * 사이트·편집기 모두 singleTilde: false(lib/gfm.ts) 라 취소선은 `~~` 두 개가 붙어 있어야 생긴다.
+ * 그래서 `~~` 가 들어 있거나, 글 끝·처음의 `~` 가 옆 노드(취소선 등)와 붙을 수 있을 때만 이스케이프한다.
  */
+export function needsTildeEscape(value: string): boolean {
+  return value.includes("~~") || value.startsWith("~") || value.endsWith("~");
+}
+
 const textHandler: Handle = (node, _parent, state: State, info: Info) => {
   const value = (node as Text).value;
   const saved = state.unsafe;
-  if ((value.match(/~/g) ?? []).length < 2) state.unsafe = saved.filter((p) => p.character !== "~");
+  if (!needsTildeEscape(value)) state.unsafe = saved.filter((p) => p.character !== "~");
   try {
     return state.safe(value, info);
   } finally {
