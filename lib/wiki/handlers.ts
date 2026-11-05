@@ -410,7 +410,11 @@ export function listComments(req: Request, p: SlugParams): Promise<Response> {
   return handle(req, async () => {
     const { id, viewer } = await gate(req, p, "comments");
     const slug = slugOf(p);
-    return json({ slug, comments: getStore().comments.list(id, slug), me: { memberId: viewer.memberId, ...permissions(viewer) } });
+    const store = getStore().comments;
+    // @부르기 후보에 나 자신도 넣는다
+    const people = store.people(id);
+    if (viewer.memberId && !people.some((p) => p.memberId === viewer.memberId)) people.push({ memberId: viewer.memberId, name: viewer.name });
+    return json({ slug, comments: store.list(id, slug), people, me: { memberId: viewer.memberId, name: viewer.name, ...permissions(viewer) } });
   });
 }
 
@@ -420,7 +424,12 @@ export function addComment(req: Request, p: SlugParams): Promise<Response> {
     const slug = slugOf(p);
     space.requireDoc(slug);
     const b = await readJson(req);
-    const c = await getStore().comments.add(id, slug, { body: b.body, parentId: str(b.parentId) ?? null }, actorOf(viewer));
+    const c = await getStore().comments.add(
+      id,
+      slug,
+      { body: b.body, parentId: str(b.parentId) ?? null, anchor: b.anchor, mentions: b.mentions },
+      actorOf(viewer)
+    );
     return json(c, { status: 201 });
   });
 }
@@ -431,7 +440,11 @@ export function editComment(req: Request, p: SlugParams): Promise<Response> {
     const b = await readJson(req);
     const cid = str(b.id);
     if (!cid) throw badRequest("id 가 필요합니다.");
-    return json(await getStore().comments.edit(id, slugOf(p), cid, b.body, actorOf(viewer)));
+    const store = getStore().comments;
+    // { id, resolved } 해결/다시 열기 · { id, like } 좋아요 · { id, body, mentions? } 고치기(내 것만)
+    if (typeof b.resolved === "boolean") return json(await store.setResolved(id, slugOf(p), cid, b.resolved, actorOf(viewer)));
+    if (typeof b.like === "boolean") return json(await store.setLike(id, slugOf(p), cid, b.like, actorOf(viewer)));
+    return json(await store.edit(id, slugOf(p), cid, b.body, actorOf(viewer), b.mentions));
   });
 }
 

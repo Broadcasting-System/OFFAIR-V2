@@ -92,9 +92,9 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 | POST | `/api/wiki/<space>/uploads` | 쓰기 | multipart `file`(+ 선택 `doc`) → 201 `{ url, path, name, size, type, image }` |
 | GET | `/api/wiki/<space>/files/<yyyy-mm>/<name>` | 읽기 | 업로드 파일. 부원 파일은 이 경로로만 받을 수 있다 |
 | GET | `/uploads/<yyyy-mm>/<name>` | 누구나 | 공개 업로드. 서버를 켠 뒤에 올라온 파일도 받을 수 있게 하는 대체 경로 |
-| GET | `/api/wiki/<space>/comments/<slug>` | 댓글 보기 | `{ comments: [{ id, author, body, createdAt, updatedAt, deleted, replies[] }] }` |
-| POST | `/api/wiki/<space>/comments/<slug>` | 쓰기 | `{ body, parentId? }` 답글은 한 단계까지. 답글에 단 답글은 같은 댓글 아래로 붙는다 |
-| PATCH | `/api/wiki/<space>/comments/<slug>` | 쓰기(내 것) | `{ id, body }` |
+| GET | `/api/wiki/<space>/comments/<slug>` | 댓글 보기 | `{ comments: [{ id, author, body, createdAt, updatedAt, deleted, replies[], anchor?, resolved?, likes?, mentions? }], people, me }`. `people` 은 @부르기 후보(이 공간에 댓글을 쓴·불린 사람 + 나) |
+| POST | `/api/wiki/<space>/comments/<slug>` | 쓰기 | `{ body, parentId?, anchor?, mentions? }` 답글은 한 단계까지. `anchor` 는 맨 위 댓글만 — `{ quote, prefix, suffix, block?, heading? }` (본문 글 자리, `lib/wiki/anchor.ts`). `mentions` 는 `[{ memberId, name }]` |
+| PATCH | `/api/wiki/<space>/comments/<slug>` | 쓰기 | `{ id, body, mentions? }` 고치기(내 것만) · `{ id, resolved: true\|false }` 해결/다시 열기 · `{ id, like: true\|false }` 좋아요(사람마다 한 번) |
 | DELETE | `/api/wiki/<space>/comments/<slug>?id=` | 쓰기(내 것) / 부장 | 답글이 달린 댓글은 내용만 지우고 자리를 남긴다 |
 | GET | `/api/wiki/guide/sync` | 쓰기 | 자동 push 상태 `{ enabled, pending, failures, lastError, lastSuccessAt, nextAttemptAt }` |
 | POST | `/api/wiki/guide/sync` | 부장 | 지금 바로 pull --rebase + push |

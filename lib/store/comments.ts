@@ -6,15 +6,25 @@ import { readIfExists, writeFileAtomic, removeFile } from "./fsutil";
 import { repoMutex } from "./mutex";
 import { joinInside, parseSlug } from "./paths";
 import type { Actor, SpaceId } from "./space";
+import { cleanAnchor, type Anchor } from "@/lib/wiki/anchor";
 
 /**
  * 문서 댓글 — <data>/comments/<space>/<slug…>.json
  * 공개 저장소에 들어가지 않는다. 답글은 한 단계까지 (답글에 단 답글은 같은 댓글 아래로).
+ *
+ * 맨 위 댓글은 본문 글에 붙을 수 있다(anchor: 고른 글 + 앞뒤 글, lib/wiki/anchor.ts).
+ * anchor 가 없으면 문서 전체에 다는 댓글. 해결(resolved)·좋아요(likes: 누른 사람 memberId)·
+ * @부르기(mentions)를 함께 기억한다. 예전 파일에는 이 칸들이 없을 수 있다.
  */
 
 export interface CommentAuthor {
   name: string;
   memberId: string | null;
+}
+
+export interface Mention {
+  memberId: string;
+  name: string;
 }
 
 export interface Reply {
@@ -23,12 +33,17 @@ export interface Reply {
   body: string;
   createdAt: string;
   updatedAt: string | null;
+  likes?: string[];
+  mentions?: Mention[];
 }
 
 export interface Comment extends Reply {
   /** 답글이 달린 댓글을 지우면 내용만 지우고 자리는 남긴다 */
   deleted: boolean;
   replies: Reply[];
+  /** 본문 글에 단 댓글이면 그 자리. 없으면 문서 전체 댓글 */
+  anchor?: Anchor | null;
+  resolved?: { by: CommentAuthor; at: string } | null;
 }
 
 interface CommentFile {
@@ -48,6 +63,24 @@ function cleanBody(body: unknown): string {
   if (!s) throw new StoreError("bad_request", "댓글 내용을 입력하세요.");
   if (s.length > MAX_BODY) throw new StoreError("too_large", `댓글은 ${MAX_BODY}자까지 쓸 수 있습니다.`);
   return s;
+}
+
+function cleanMentions(input: unknown): Mention[] {
+  if (!Array.isArray(input)) return [];
+  const out: Mention[] = [];
+  const seen = new Set<string>();
+  for (const m of input.slice(0, 20)) {
+    const id = String((m as Mention)?.memberId ?? "").slice(0, 80);
+    const name = String((m as Mention)?.name ?? "").replace(/[\u0000-\u001f]/g, "").slice(0, 80);
+    if (!id || !name || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ memberId: id, name });
+  }
+  return out;
+}
+
+function authorOf(actor: Actor): CommentAuthor {
+  return { name: String(actor.name || "익명").slice(0, 80), memberId: actor.memberId ?? null };
 }
 
 function isOwner(c: Reply, actor: Actor): boolean {
@@ -107,16 +140,24 @@ export class CommentStore {
     return this.list(space, slug).reduce((n, c) => n + (c.deleted ? 0 : 1) + c.replies.length, 0);
   }
 
-  add(space: SpaceId, slug: string | string[], input: { body: unknown; parentId?: string | null }, actor: Actor): Promise<Comment | Reply> {
+  add(
+    space: SpaceId,
+    slug: string | string[],
+    input: { body: unknown; parentId?: string | null; anchor?: unknown; mentions?: unknown },
+    actor: Actor
+  ): Promise<Comment | Reply> {
     const body = cleanBody(input.body);
     const file = this.fileOf(space, slug);
     const now = new Date().toISOString();
+    const mentions = cleanMentions(input.mentions);
     const base: Reply = {
       id: crypto.randomUUID(),
-      author: { name: String(actor.name || "익명").slice(0, 80), memberId: actor.memberId ?? null },
+      author: authorOf(actor),
       body,
       createdAt: now,
       updatedAt: null,
+      likes: [],
+      ...(mentions.length ? { mentions } : {}),
     };
     return this.mutate(file, (data) => {
       if (input.parentId) {
@@ -128,13 +169,14 @@ export class CommentStore {
         parent.replies.push(base);
         return base;
       }
-      const c: Comment = { ...base, deleted: false, replies: [] };
+      const anchor = cleanAnchor(input.anchor);
+      const c: Comment = { ...base, deleted: false, replies: [], anchor, resolved: null };
       data.comments.push(c);
       return c;
     });
   }
 
-  edit(space: SpaceId, slug: string | string[], id: string, bodyInput: unknown, actor: Actor): Promise<Reply> {
+  edit(space: SpaceId, slug: string | string[], id: string, bodyInput: unknown, actor: Actor, mentionsInput?: unknown): Promise<Reply> {
     const body = cleanBody(bodyInput);
     const file = this.fileOf(space, slug);
     return this.mutate(file, (data) => {
@@ -145,8 +187,65 @@ export class CommentStore {
       if (!isOwner(target.item, actor)) throw new StoreError("forbidden", "내 댓글만 고칠 수 있습니다.");
       target.item.body = body;
       target.item.updatedAt = new Date().toISOString();
+      if (mentionsInput !== undefined) target.item.mentions = cleanMentions(mentionsInput);
       return target.item;
     });
+  }
+
+  /** 맨 위 댓글 해결/다시 열기 — 쓸 수 있는 사람 누구나 */
+  setResolved(space: SpaceId, slug: string | string[], id: string, resolved: boolean, actor: Actor): Promise<Comment> {
+    const file = this.fileOf(space, slug);
+    return this.mutate(file, (data) => {
+      const c = data.comments.find((x) => x.id === id);
+      if (!c) throw new StoreError("not_found", "댓글을 찾을 수 없습니다.");
+      c.resolved = resolved ? { by: authorOf(actor), at: new Date().toISOString() } : null;
+      return c;
+    });
+  }
+
+  /** 좋아요 누르기/빼기 (사람마다 한 번) */
+  setLike(space: SpaceId, slug: string | string[], id: string, like: boolean, actor: Actor): Promise<Reply> {
+    const file = this.fileOf(space, slug);
+    const who = actor.memberId ? String(actor.memberId) : null;
+    if (!who) return Promise.reject(new StoreError("forbidden", "로그인한 부원만 누를 수 있습니다."));
+    return this.mutate(file, (data) => {
+      const target = findAny(data, id);
+      if (!target || (target.kind === "comment" && target.item.deleted)) {
+        throw new StoreError("not_found", "댓글을 찾을 수 없습니다.");
+      }
+      const likes = new Set(target.item.likes ?? []);
+      if (like) likes.add(who);
+      else likes.delete(who);
+      target.item.likes = [...likes];
+      return target.item;
+    });
+  }
+
+  /** @부르기 후보: 이 공간에 댓글을 쓴 적 있는 사람들 (memberId 가 있는 사람만) */
+  people(space: SpaceId): Mention[] {
+    const dir = joinInside(this.root, [space]);
+    const found = new Map<string, string>();
+    const walk = (d: string) => {
+      if (!fs.existsSync(d)) return;
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (e.name.endsWith(".json")) {
+          try {
+            for (const c of this.read(full).comments) {
+              for (const x of [c, ...c.replies]) {
+                if (x.author.memberId) found.set(x.author.memberId, x.author.name);
+                for (const m of x.mentions ?? []) if (!found.has(m.memberId)) found.set(m.memberId, m.name);
+              }
+            }
+          } catch {
+            /* 깨진 파일은 건너뛴다 */
+          }
+        }
+      }
+    };
+    walk(dir);
+    return [...found].map(([memberId, name]) => ({ memberId, name })).sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }
 
   remove(space: SpaceId, slug: string | string[], id: string, actor: Actor, perm: CommentPermission): Promise<{ removed: boolean }> {

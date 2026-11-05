@@ -197,6 +197,42 @@ describe("댓글", () => {
     assert.equal((await add("tok-member", { body: "   " })).status, 400);
   });
 
+  test("본문 글 자리·해결·좋아요·@부르기", async () => {
+    const add = (token: string, body: unknown) => h.addComment(req("POST", "/x", { token, body }), intro);
+    const anchor = { quote: "방송부 가이드", prefix: "안녕 ", suffix: "입니다.", block: 1, heading: "안녕" };
+    const c = await bodyOf(
+      await add("tok-member", { body: "여기 고쳐 주세요 @이부원", anchor, mentions: [{ memberId: "m-2", name: "이부원" }, { memberId: "", name: "x" }] })
+    );
+    assert.deepEqual(c.anchor, anchor);
+    assert.deepEqual(c.mentions, [{ memberId: "m-2", name: "이부원" }]);
+    assert.equal(c.resolved, null);
+    // 답글에는 자리가 붙지 않는다
+    const r = await bodyOf(await add("tok-member2", { body: "네", parentId: c.id, anchor }));
+    assert.equal(r.anchor, undefined);
+
+    const patch = (token: string, body: unknown) => h.editComment(req("PATCH", "/x", { token, body }), intro);
+    // 해결은 쓸 수 있는 사람 누구나, 졸업생(읽기만)은 못 한다
+    assert.equal((await patch("tok-alumni", { id: c.id, resolved: true })).status, 403);
+    const res = await bodyOf(await patch("tok-member2", { id: c.id, resolved: true }));
+    assert.equal((res.resolved as { by: { name: string } }).by.name, "이부원");
+    // 좋아요는 사람마다 한 번
+    await patch("tok-member", { id: c.id, like: true });
+    await patch("tok-member", { id: c.id, like: true });
+    const liked = await bodyOf(await patch("tok-member2", { id: c.id, like: true }));
+    assert.deepEqual((liked.likes as string[]).sort(), ["m-1", "m-2"]);
+    const unliked = await bodyOf(await patch("tok-member", { id: c.id, like: false }));
+    assert.deepEqual(unliked.likes, ["m-2"]);
+    // 다시 열기
+    assert.equal((await bodyOf(await patch("tok-member", { id: c.id, resolved: false }))).resolved, null);
+
+    const list = await bodyOf(await h.listComments(req("GET", "/x", { token: "tok-lead" }), intro));
+    const people = list.people as { memberId: string; name: string }[];
+    assert.deepEqual(people.map((p) => p.memberId).sort(), ["m-1", "m-2", "m-lead"], "댓글 쓴 사람 + 불린 사람 + 나");
+    assert.equal((list.me as { name: string }).name, "부장");
+    // 손님은 목록도 못 본다
+    assert.equal((await h.listComments(req("GET", "/x"), intro)).status, 401);
+  });
+
   test("문서를 옮기면 댓글도 따라간다", async () => {
     await h.addComment(req("POST", "/x", { token: "tok-member", body: { body: "따라와" } }), intro);
     await h.moveDoc(req("POST", "/x", { token: "tok-member", body: { from: "intro", to: "welcome" } }), G);
