@@ -15,6 +15,14 @@ npm start       # 빌드 결과 실행
 서버 PC 에서 위키로 쓰기 위한 저장소·git 이력·API·권한은 [`docs/wiki-backend.md`](docs/wiki-backend.md) 참고.
 `npm test` 로 백엔드 테스트를 돌린다.
 
+## 위키 편집 (`/write/<공간>/<문서>`)
+
+문서 위 막대의 **편집**(또는 ⌘K → E, 서랍 트리의 ＋·새 문서)으로 연다. 부원(ONAIR 로그인) 이상만 열리고,
+게시하면 git 커밋이 생긴다. 부원 공간은 `/members`. 자세한 구조·권한·Access 설정은 `docs/wiki-backend.md`.
+
+개발할 때 로그인 없이 써 보려면 `OFFAIR_DEV_ROLE=lead npm run dev`. 시험 저장이 이 저장소에 커밋되지 않게
+`OFFAIR_GUIDE_REPO=<이 저장소를 clone 한 임시 폴더> OFFAIR_DATA_DIR=<임시 폴더>` 를 함께 준다.
+
 ## 수정 모드 (dev 전용, `/edit`)
 
 `npm run dev` 에서만 열리는 인-브라우저 편집 UI. 프로덕션에선 404로 잠깁니다.

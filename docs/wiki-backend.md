@@ -1,7 +1,41 @@
 # OFFAIR 위키 백엔드
 
-OFFAIR 를 학교 서버 PC 에서 도는 위키로 쓰기 위한 서버 쪽 구조다. 화면(UI)은 따로 만든다.
+OFFAIR 를 학교 서버 PC 에서 도는 위키로 쓰기 위한 서버 쪽 구조다.
 문서는 지금처럼 디스크의 MDX 파일이고, 저장할 때마다 git 커밋이 하나씩 생긴다.
+
+## 화면 주소
+
+| 주소 | 무엇 | 렌더링 |
+| --- | --- | --- |
+| `/`, `/docs/<slug…>`, `/recent`, `/trash` | 가이드북(공개) | 정적 생성 + ISR (저장하면 `revalidatePath`) |
+| `/members`, `/members/<slug…>` | 부원 공간 첫 화면·문서 | **요청마다** 권한 확인(`lib/wiki/server-viewer.ts`). 권한이 없으면 문서가 있든 없든 로그인 벽만 그린다. `generateStaticParams` 없음 |
+| `/write/<space>/<slug…>` | 편집기 (`guide`·`members`) | 요청마다 권한 확인. 손님 → 로그인 벽, 읽기만 되는 사람(졸업생 등) → "편집 권한이 없어요". 저장은 `PUT /api/wiki/<space>/docs/<slug>` |
+| `/login?next=<경로>` | 로그인 벽의 [로그인] | Cloudflare Access 가 지키는 경로. 통과하면 `next`(사이트 안 경로만)로 303 |
+
+편집 주소는 언제나 `editHref(space, slug)`(`lib/wiki/links.ts`) 로 만든다 — 트리·검색·문서 위 막대·팔레트(E)·"새 문서"(트리 ＋, 팔레트 N)가 같은 규칙.
+"새 문서" 는 `POST /api/wiki/<space>/docs` 로 먼저 만든 뒤 그 문서의 편집기를 연다. 게시하면 읽기 화면(`/docs/…`, `/members/…`)으로 돌아간다.
+
+부원 문서는 빌드 결과·정적 HTML·루트 레이아웃에 들어가지 않는다: 서랍의 부원 트리는 브라우저가 `GET /api/wiki/members/tree` 로 받고(권한 확인), 검색은 `/api/wiki/members/search`, 문서 화면은 동적 렌더링이다.
+
+## 로그인 벽과 Cloudflare Access
+
+손님이 부원 공간·부원 문서·편집 화면을 열면 본문 자리에 "부원만 볼 수 있어요 … [로그인]" 카드가 나온다(`components/members/login-wall.tsx`).
+[로그인] 은 `/login?next=<지금 주소>` 로 간다. 이 경로를 Access 앱이 지키므로:
+
+1. 로그인 안 한 브라우저 → Access 로그인 화면(ONAIR 에 등록한 메일로 받은 코드)
+2. 통과 → Access 가 `CF_Authorization` 쿠키를 심고 `/login?next=…` 로 돌려보냄
+3. `app/login/route.ts` 가 `next` 로 303 → 사용자는 보던 문서로 돌아온다
+4. 그 뒤 요청은 쿠키의 토큰을 ONAIR `GET /api/members/me` 가 검증해서 신원을 정한다 (`lib/wiki/auth.ts`)
+
+이 방식이 가정하는 Access 설정:
+
+- **self-hosted 앱 하나, 경로 `/login`** (호스트 예: `offair.bssmcast.com/login`). 정책은 ONAIR 와 같은 부원 이메일 허용.
+- `/members*`·`/write*`·`/api/wiki/members/*` 는 Access 로 덮지 **않아도** 된다(서버가 쿠키로 직접 권한을 확인한다). 덮으면 손님에게 로그인 벽 대신 Access 화면이 먼저 나오고, `fetch` 로 부르는 API 가 Access 로그인 HTML 로 바뀌어 화면이 깨질 수 있으니 API 경로는 덮지 않는다.
+- `CF_Authorization` 쿠키가 **호스트 전체(`Path=/`)** 로 보내져야 `/members` 등에서 신원을 안다. 배포 때 브라우저 개발자 도구로 쿠키의 Domain·Path 를 꼭 확인한다. 경로 앱의 쿠키가 `/login` 에만 묶이면, Access 앱 경로를 `/login` 과 함께 `/members`·`/write` 로 넓히고(이 경우 손님은 Access 화면을 먼저 본다) API 경로만 빼 둔다.
+- 그 앱의 AUD 를 ONAIR `.env` 의 `CF_ACCESS_AUD` 에 덧붙인다(아래 배포 2번).
+- 로그아웃은 내 메뉴의 [로그아웃] = `/cdn-cgi/access/logout` (Access 가 쿠키를 지운다).
+
+개발에서는 Access 가 없으므로 `/login` 이 그냥 `next` 로 돌려보낸다. `OFFAIR_DEV_ROLE` 이 없으면 로그인 벽이 그대로 보이고, 있으면(예: `lead`) 내용이 보인다.
 
 ## 공간 두 개
 
@@ -76,7 +110,8 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 
 | 메서드 | 경로 | 권한 | 설명 |
 | --- | --- | --- | --- |
-| GET | `/api/me` | 누구나 | `{ role, name, memberId, authenticated, canEdit, canReadMembers, canComment, canModerate, readOnly }` |
+| GET | `/api/me` | 누구나 | `{ role, name, memberId, authenticated, cohort, roleLabel, canEdit, canReadMembers, canComment, canModerate, readOnly }`. `cohort`(기수)·`roleLabel` 은 ONAIR 가 주면 그대로 |
+| GET | `/api/me/activity` | 로그인 | 내 메뉴: `{ mentions: [{ space, slug, url, title, id, threadId, author, body, createdAt, quote }], edits: [{ space, slug, url, title, category, date, message, rev }] }`. 읽을 수 있는 공간만. 고친 문서는 커밋 작성자 이메일 `<memberId>@<도메인>`(없으면 이름)으로 찾는다 |
 | GET | `/api/wiki/<space>/tree` | 읽기 | `{ categories, groups: [{ category, order, items: DocMeta[] }] }`. 빈 카테고리도 포함 |
 | GET | `/api/wiki/<space>/search[?q=]` | 읽기 | q 없으면 색인 전체(제목·설명·카테고리·소제목·본문 평문), q 있으면 점수순 결과와 스니펫 |
 | POST | `/api/wiki/<space>/docs` | 쓰기 | 만들기 `{ title, category?, slug?, description?, body?, frontmatter?, message? }` → 201 |
@@ -92,7 +127,8 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 | GET | `/api/wiki/<space>/diff/<slug>?from=&to=` | 읽기 | `to` 를 비우면 지금 파일과 비교하고, `from=empty` 면 빈 문서와 비교. `{ added, removed, unified, hunks, lines:[{ type:add/del/ctx, text, oldNo, newNo }] }` |
 | POST | `/api/wiki/<space>/revert/<slug>` | 쓰기 | `{ rev, baseRev?, message? }` 그 버전 내용으로 새 커밋. 지워진 문서면 되살린다 |
 | GET | `/api/wiki/<space>/trash` | 읽기 | 지워진 문서 목록 `{ slug, title, deletedAt, deletedBy, rev }`. 되살리기는 revert 에 이력의 rev 를 넣는다 |
-| POST | `/api/wiki/<space>/uploads` | 쓰기 | multipart `file`(+ 선택 `doc`) → 201 `{ url, path, name, size, type, image }` |
+| POST | `/api/wiki/<space>/uploads` | 쓰기 | multipart `file`(+ 선택 `doc`, `width`, `height`, `of`) → 201 `{ url, path, name, fileName, size, type, image }`. `of`(본 그림 주소)를 주면 표시 달기 보조 파일로 본 그림 옆에 `이름.base.<ext>` / `이름.marks.json` 으로 둔다(같은 이름이면 덮어씀, JSON 은 512KB 까지) |
+| GET | `/api/wiki/<space>/uploads[?doc=&q=]` | 쓰기 | 올린 파일 목록(최근 것 먼저) `{ files: [{ url, name, fileName, size, kind, type, width?, height?, doc?, uploadedAt, sidecarUrl? }] }`. 보조 파일은 숨기고 본 그림에 `sidecarUrl` 로 붙인다. `doc` 은 올릴 때 기록된 문서만 |
 | GET | `/api/wiki/<space>/files/<yyyy-mm>/<name>` | 읽기 | 업로드 파일. 부원 파일은 이 경로로만 받을 수 있다 |
 | GET | `/uploads/<yyyy-mm>/<name>` | 누구나 | 공개 업로드. 서버를 켠 뒤에 올라온 파일도 받을 수 있게 하는 대체 경로 |
 | GET | `/api/wiki/<space>/comments/<slug>` | 댓글 보기 | `{ comments: [{ id, author, body, createdAt, updatedAt, deleted, replies[], anchor?, resolved?, likes?, mentions? }], people, me }`. `people` 은 @부르기 후보(이 공간에 댓글을 쓴·불린 사람 + 나) |
@@ -179,17 +215,17 @@ curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text
 
 ## 서버 PC 에 배포할 때 해야 할 일 (이 작업에서는 아무것도 설정하지 않았다)
 
-1. **Cloudflare Access 앱**: 편집·부원 화면 경로(예: `/edit*`, `/members*`, `/api/wiki/members/*`)를 덮는 self-hosted 앱을 만들고 부원 이메일 정책을 건다. 공개 문서와 `/api/me`, `/api/wiki/guide/*` 읽기는 Access 밖에 둬도 된다. 로그인한 브라우저는 `CF_Authorization` 쿠키를 보내므로 서버가 신원을 알 수 있다. 쿠키가 호스트 전체 경로로 가는지는 배포 때 확인해야 한다.
+1. **Cloudflare Access 앱**: 위 "로그인 벽과 Cloudflare Access" 대로 `/login` 경로를 덮는 self-hosted 앱을 만들고 부원 이메일 정책을 건다. 공개 문서·API 는 Access 밖에 둔다. 쿠키(`CF_Authorization`)가 `Path=/` 로 가는지 꼭 확인한다.
 2. **AUD 등록**: 그 Access 앱의 Application Audience(AUD) 태그를 ONAIR 서버 `.env` 의 `CF_ACCESS_AUD` 에 콤마로 덧붙이고 ONAIR 를 다시 켠다. ONAIR 코드는 바꿀 필요가 없다.
 3. **push 자격 증명**: 서버를 돌리는 Windows 계정에서 OFFAIR-V2 저장소에 push 할 수 있어야 한다. 이 저장소에만 쓰기 권한이 있는 fine-grained PAT(Git Credential Manager 에 저장)나 deploy key(SSH) 중 하나를 쓴다. 프롬프트는 띄우지 않으므로(`GIT_TERMINAL_PROMPT=0`) 자격 증명이 없으면 `push.log` 에 실패로만 남는다. `main` 에 브랜치 보호가 있으면 push 가 거부되니 예외를 주거나 `OFFAIR_GIT_BRANCH` 를 따로 정한다. push 할 때마다 Vercel 빌드가 돌기 때문에 빌드가 너무 잦으면 `OFFAIR_GIT_PUSH_DEBOUNCE_MS` 를 늘린다(예: 300000).
 4. **git**: Git for Windows 를 설치한다. 저장소 폴더 소유자와 서버 실행 계정이 다르면 `git config --global --add safe.directory <경로>` 가 필요할 수 있다.
-5. **환경 변수**: `.env.local` 등에 `OFFAIR_GIT_PUSH=1`, `OFFAIR_DATA_DIR=<저장소 밖 경로 권장, 예: D:\offair-data>`, `ONAIR_API_BASE` 를 넣는다. `OFFAIR_DEV_ROLE` 은 넣지 않는다(production 에서는 어차피 무시된다).
+5. **환경 변수**: `.env.local` 등에 `OFFAIR_GIT_PUSH=1`, `OFFAIR_DATA_DIR=<저장소 밖 경로 권장, 예: D:\offair-data>`, `ONAIR_API_BASE`, `OFFAIR_PUBLIC_URL=https://<공개 호스트>`, (CUE 를 쓰면) `OFFAIR_SERVICE_TOKEN=<긴 난수>` 를 넣는다. 터널이 Host 를 바꿔 쓰기가 403 이면 `OFFAIR_ALLOWED_ORIGINS` 도. `OFFAIR_DEV_*` 는 넣지 않는다(production 에서는 어차피 무시된다).
 6. **실행**: `npm run build` 뒤 `next start -H 127.0.0.1` 처럼 터널에서만 들어오게 묶는다. 신원은 ONAIR 가 토큰을 검증해서 정하므로 우회해도 권한이 생기지는 않지만, 바깥에서 직접 들어올 길은 닫아 두는 편이 낫다.
 7. **백업**: 데이터 폴더를 백업 대상에 넣는다.
 
 ## 기존 dev 전용 `/edit`
 
-그대로 둔다. `npm run dev` 에서만 열리고, 파일을 직접 쓰며 **커밋하지 않는다**(예전 동작). 저장소는 파일 mtime 으로 캐시하므로 `/edit` 로 고친 내용도 바로 보인다. 새 위키 편집기가 생기면 지운다.
+그대로 둔다. `npm run dev` 에서만 열리고, 실행 폴더의 `content/` 를 직접 쓰며 **커밋하지 않는다**(예전 동작 — `OFFAIR_GUIDE_REPO` 도 보지 않는다). 문서 편집은 새 편집기(`/write/…`)를 쓰고, `/edit/home`(홈 문구 `content/home.json`)만 아직 이 화면에서 고친다. 홈 문구 편집이 위키로 옮겨지면 지운다.
 
 ## 테스트
 
@@ -197,4 +233,5 @@ curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text
 npm test   # node:test + tsx. 임시 폴더에 git 저장소를 만들어 돌린다
 ```
 
-경로 안전, 저장 충돌(409), 커밋·이력·diff·되돌리기, 부원 공간 격리, 역할별 권한 표(ONAIR 응답은 흉내), 업로드, 댓글, 자동 push(로컬 bare 원격)를 다룬다.
+경로 안전, 저장 충돌(409), 커밋·이력·diff·되돌리기, 부원 공간 격리, 역할별 권한 표(ONAIR 응답은 흉내), 업로드·목록·표시 달기 보조 파일, 내 메뉴, 댓글, 자동 push(로컬 bare 원격), CUE 서비스 토큰·문서 글(format=text), 로그인 주소를 다룬다.
+편집기 변환기 테스트(vitest)는 `tests/fixtures/content/` 의 문서 사본을 쓴다 — `content/` 를 비워도 테스트는 돈다.
