@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon } from "@/components/shell/icons";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { saveHome } from "@/app/edit/actions";
@@ -38,15 +39,16 @@ export function HomeEditor({ initial }: { initial: HomeConfig }) {
         <Link
           href="/edit"
           className="text-fg-muted transition-colors hover:text-fg"
+          aria-label="문서 목록"
         >
-          ←
+          <ArrowLeftIcon size={16} />
         </Link>
         <span className="rounded bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold uppercase tracking-wider text-amber-300">
           홈 화면 편집
         </span>
         <div className="ml-auto flex items-center gap-3">
           {status === "ok" && (
-            <span className="font-mono text-xs text-emerald-300">저장됨 ✓</span>
+            <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-300"><CheckIcon size={13} />저장됨</span>
           )}
           {status === "error" && (
             <span className="font-mono text-xs text-rose-300">저장 실패</span>
@@ -94,7 +96,7 @@ export function HomeEditor({ initial }: { initial: HomeConfig }) {
           <div className="mt-5 flex gap-2">
             {cfg.primaryCta.label && (
               <span className="rounded-lg bg-beam-500 px-4 py-2 text-sm font-medium text-ink-950">
-                {cfg.primaryCta.label} →
+                {cfg.primaryCta.label} <ArrowRightIcon size={14} className="inline align-[-2px]" />
               </span>
             )}
             {cfg.secondaryCta.label && (

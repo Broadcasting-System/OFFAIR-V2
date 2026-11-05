@@ -208,3 +208,44 @@ export const ArrowDownIcon = (p: IconProps) => (
     <path d="M12 5v14M6 13l6 6 6-6" />
   </Svg>
 );
+export const ArrowLeftIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </Svg>
+);
+export const ArrowRightIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </Svg>
+);
+export const ExternalIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14 4.5h5.5V10M19.5 4.5 11 13" />
+    <path d="M17 14v5.5H4.5V7H10" />
+  </Svg>
+);
+/** 로그아웃 — 문 밖으로 */
+export const LogoutIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10" />
+  </Svg>
+);
+/** 로그인 — 문 안으로 */
+export const LoginIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14 4h5v16h-5M10 8l4 4-4 4M4 12h10" />
+  </Svg>
+);
+/** 공간 바꾸기 */
+export const SwapIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 8h12l-3-3M17 16H5l3 3" />
+  </Svg>
+);
+/** 기기 따라가기(테마) */
+export const MonitorIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3.5" y="4.5" width="17" height="11" rx="1.5" />
+    <path d="M9 19.5h6M12 15.5v4" />
+  </Svg>
+);

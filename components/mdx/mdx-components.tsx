@@ -1,4 +1,5 @@
 import type { MDXComponents } from "mdx/types";
+import { ArrowRightIcon } from "@/components/shell/icons";
 import Link from "next/link";
 import { CodeBlock } from "./copy-button";
 import { Figure } from "./figure";
@@ -98,7 +99,7 @@ function Card({
             aria-hidden
             className="text-fg-3 transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
           >
-            →
+            <ArrowRightIcon size={16} />
           </span>
         )}
       </span>

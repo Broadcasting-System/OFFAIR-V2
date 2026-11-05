@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/components/shell/icons";
 import type { Doc, DocMeta } from "@/lib/content";
 import { formatDate, getDocFileInfo, readingMinutes } from "@/lib/doc-info";
 import { PageBar } from "@/components/shell/page-bar";
@@ -142,7 +143,7 @@ function PrevNext({
           href={prev.url}
           className="group rounded-xl bg-bg-soft px-[18px] py-4 transition-colors hover:bg-hover"
         >
-          <small className="mb-1 block text-xs text-fg-3">← 이전</small>
+          <small className="mb-1 flex items-center gap-1 text-xs text-fg-3"><ArrowLeftIcon size={13} />이전</small>
           <b className="font-semibold text-fg group-hover:text-accent">
             {prev.title}
           </b>
@@ -155,7 +156,7 @@ function PrevNext({
           href={next.url}
           className="group rounded-xl bg-bg-soft px-[18px] py-4 text-right transition-colors hover:bg-hover"
         >
-          <small className="mb-1 block text-xs text-fg-3">다음 →</small>
+          <small className="mb-1 flex items-center justify-end gap-1 text-xs text-fg-3">다음<ArrowRightIcon size={13} /></small>
           <b className="font-semibold text-fg group-hover:text-accent">
             {next.title}
           </b>

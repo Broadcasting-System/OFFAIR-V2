@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { ArrowRightIcon } from "@/components/shell/icons";
 import path from "node:path";
 import matter from "gray-matter";
 import Link from "next/link";
@@ -90,7 +91,7 @@ export default function EditIndexPage() {
           </span>
         </span>
         <span className="text-beam-400 transition-transform group-hover:translate-x-0.5">
-          →
+          <ArrowRightIcon size={16} />
         </span>
       </Link>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "@/components/shell/icons";
 import { EditFab } from "@/components/dev/edit-fab";
 import { HomeSearch } from "@/components/home-search";
 import { PageBar } from "@/components/shell/page-bar";
@@ -100,7 +101,7 @@ export default function HomePage() {
                         href={group.items[PER_CATEGORY].url}
                         className="mt-1.5 self-start rounded text-[13px] font-medium text-accent hover:underline"
                       >
-                        외 {rest}개 더 보기 →
+                        외 {rest}개 더 보기 <ArrowRightIcon size={13} className="inline align-[-2px]" />
                       </Link>
                     )}
                   </li>

@@ -81,6 +81,11 @@ export const IconX = () => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Ic>
 );
+export const IconCheck = () => (
+  <Ic>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Ic>
+);
 export const IconPen = () => (
   <Ic>
     <path d="M4 20h4L19 9l-4-4L4 16z" />

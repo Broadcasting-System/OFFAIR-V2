@@ -426,6 +426,11 @@
   font: 700 11px var(--wm-font);
   box-shadow: 0 0 0 2px var(--wm-bg);
 }
+.wiki-media .wm-check .wm-ic {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.4;
+}
 .wiki-media .wm-tag {
   position: absolute;
   top: 6px;

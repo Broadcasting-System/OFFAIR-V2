@@ -36,7 +36,7 @@ import { formatBytes, prepareImage, shrinkMessage } from "@/lib/media/image";
 import type { FileInfo, MediaClient, MediaItem } from "@/lib/media/types";
 import { nameFromUrl, normalizeHttpUrl, parseYouTube, youTubeThumb, youTubeWatchUrl } from "@/lib/media/url";
 
-import { IconPen, IconSearch, IconUpload, IconX } from "./icons";
+import { IconCheck, IconPen, IconSearch, IconUpload, IconX } from "./icons";
 import { ImageAnnotator } from "./image-annotator";
 import { useIsClient, useModal } from "./use-modal";
 
@@ -687,7 +687,7 @@ function DialogBody({
                         {f.sidecarUrl && <span className="wm-tag">표시</span>}
                         {on && (
                           <span className="wm-check" aria-hidden>
-                            {multiple ? picked.indexOf(f.url) + 1 : "✓"}
+                            {multiple ? picked.indexOf(f.url) + 1 : <IconCheck />}
                           </span>
                         )}
                         <small>{f.name}</small>

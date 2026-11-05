@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeftIcon, CheckIcon } from "@/components/shell/icons";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -186,7 +187,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
           className="text-fg-muted transition-colors hover:text-fg"
           aria-label="문서 목록"
         >
-          ←
+          <ArrowLeftIcon size={16} />
         </Link>
         <span className="rounded bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold uppercase tracking-wider text-amber-300">
           Edit mode
@@ -204,7 +205,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
 
         <div className="ml-auto flex items-center gap-2">
           {saved === "ok" && (
-            <span className="font-mono text-xs text-emerald-300">저장됨 ✓</span>
+            <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-300"><CheckIcon size={13} />저장됨</span>
           )}
           {saved === "error" && (
             <span className="font-mono text-xs text-rose-300">저장 실패</span>

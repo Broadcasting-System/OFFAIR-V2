@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CloseIcon, ExternalIcon } from "@/components/shell/icons";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import {
@@ -213,7 +214,7 @@ export function SidebarManager({ initialGroups, otherFiles }: Props) {
       });
       if (res.ok) {
         setSavedSnapshot(serialize(groups));
-        setStatus("레이아웃 저장됨 ✓");
+        setStatus("레이아웃 저장됨");
         router.refresh();
       } else setStatus(res.error ?? "저장 실패");
       setTimeout(() => setStatus(null), 2500);
@@ -321,8 +322,9 @@ export function SidebarManager({ initialGroups, otherFiles }: Props) {
                   <Link
                     href={f.url}
                     className="text-xs text-fg-faint hover:text-beam-300"
+                    aria-label="문서 보기"
                   >
-                    ↗
+                    <ExternalIcon size={13} />
                   </Link>
                 )}
               </li>
@@ -388,8 +390,9 @@ function SortableCategory({
           onClick={() => onRemove(group.id)}
           className="rounded px-1.5 text-fg-faint transition-colors hover:text-rose-300"
           title="카테고리 삭제"
+          aria-label="카테고리 삭제"
         >
-          ✕
+          <CloseIcon size={14} />
         </button>
       </div>
 
@@ -462,16 +465,18 @@ function SortableItem({
         href={item.url}
         className="text-xs text-fg-faint opacity-0 transition-opacity hover:text-beam-300 group-hover:opacity-100"
         title="문서 보기"
+        aria-label="문서 보기"
       >
-        ↗
+        <ExternalIcon size={13} />
       </Link>
       <button
         type="button"
         onClick={() => onDelete(item)}
         className="rounded px-1.5 text-fg-faint opacity-0 transition-opacity hover:text-rose-300 group-hover:opacity-100"
         title="문서 삭제"
+        aria-label="문서 삭제"
       >
-        ✕
+        <CloseIcon size={14} />
       </button>
     </li>
   );
