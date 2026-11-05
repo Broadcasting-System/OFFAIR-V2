@@ -72,7 +72,7 @@ export default function EditIndexPage() {
       <span className="rounded bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold uppercase tracking-wider text-amber-300">
         Edit mode · dev only
       </span>
-      <h1 className="mt-4 font-display text-3xl font-extrabold text-white">
+      <h1 className="mt-4 font-display text-3xl font-extrabold text-fg">
         문서 · 사이드바 관리
       </h1>
       <p className="mt-2 mb-6 text-fg-muted">
@@ -84,7 +84,7 @@ export default function EditIndexPage() {
         className="group mb-8 flex items-center justify-between gap-4 rounded-xl border border-line bg-ink-900/50 px-4 py-3.5 transition-colors hover:border-beam-500/50"
       >
         <span>
-          <span className="font-medium text-white">홈 화면 (히어로) 편집</span>
+          <span className="font-medium text-fg">홈 화면 (히어로) 편집</span>
           <span className="mt-0.5 block text-sm text-fg-muted">
             태그라인 · 제목 · 설명 · 버튼 텍스트/링크
           </span>

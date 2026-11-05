@@ -1,26 +1,31 @@
 import Link from "next/link";
 
+/** OFFAIR 로고: 파란 둥근 네모 + (선택) 글자. */
 export function Logo({
-  withTagline = false,
+  withWordmark = true,
   className = "",
 }: {
-  withTagline?: boolean;
+  withWordmark?: boolean;
   className?: string;
 }) {
   return (
     <Link
       href="/"
-      className={`group inline-flex flex-col leading-none ${className}`}
       aria-label="OFFAIR 홈"
+      className={`inline-flex items-center gap-2 rounded-md text-[15px] font-extrabold tracking-[0.06em] text-fg ${className}`}
     >
-      <span className="font-display text-xl font-extrabold tracking-[0.06em] text-white transition-[text-shadow] group-hover:text-glow">
-        OFFAIR
-      </span>
-      {withTagline && (
-        <span className="mt-1 font-display text-[0.55rem] font-medium uppercase tracking-[0.32em] text-fg-faint">
-          BSSM Broadcast Guide Book
-        </span>
-      )}
+      <LogoMark />
+      {withWordmark && <span>OFFAIR</span>}
     </Link>
+  );
+}
+
+export function LogoMark({ size = 22 }: { size?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block flex-none rounded-[6px] bg-accent"
+      style={{ width: size, height: size }}
+    />
   );
 }

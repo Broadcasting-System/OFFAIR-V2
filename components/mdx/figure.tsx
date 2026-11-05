@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface FigureProps {
   src: string;
@@ -9,13 +9,13 @@ interface FigureProps {
   caption?: string;
   width?: number;
   height?: number;
-  /** disable click-to-zoom */
+  /** 클릭 확대 끄기 */
   static?: boolean;
 }
 
 /**
- * Image-control block for the guide book.
- * Renders a framed, captioned figure with click-to-zoom lightbox.
+ * 캡션이 붙은 그림. 테두리 1px · 8px 둥근 모서리, 캡션은 아래 칸.
+ * 누르면 화면 가득 확대(Esc · 바깥 클릭으로 닫기).
  *
  *   <Figure src="/shots/obs.png" alt="OBS 화면" caption="장면 전환 패널" width={1280} height={720} />
  */
@@ -28,33 +28,51 @@ export function Figure({
   static: noZoom = false,
 }: FigureProps) {
   const [open, setOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    closeRef.current?.focus();
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+      trigger?.focus();
+    };
+  }, [open]);
+
+  const img = (
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className="h-auto w-full"
+      sizes="(max-width: 768px) 100vw, 700px"
+    />
+  );
 
   return (
-    <figure className="my-7">
-      <div className="hud-frame overflow-hidden rounded-lg border border-line bg-ink-900 p-1.5">
+    <figure className="my-5 overflow-hidden rounded-lg border border-line bg-bg">
+      {noZoom ? (
+        <div className="block">{img}</div>
+      ) : (
         <button
+          ref={triggerRef}
           type="button"
-          onClick={() => !noZoom && setOpen(true)}
-          className={`block w-full overflow-hidden rounded ${
-            noZoom ? "cursor-default" : "cursor-zoom-in"
-          }`}
-          aria-label={noZoom ? alt : `${alt} 확대`}
+          onClick={() => setOpen(true)}
+          className="block w-full cursor-zoom-in"
+          aria-label={`${alt} 크게 보기`}
         >
-          <Image
-            src={src}
-            alt={alt}
-            width={width}
-            height={height}
-            className="h-auto w-full"
-            sizes="(max-width: 768px) 100vw, 760px"
-          />
+          {img}
         </button>
-      </div>
+      )}
       {caption && (
-        <figcaption className="mt-3 flex items-center gap-2 text-sm text-fg-muted">
-          <span className="font-mono text-xs uppercase tracking-wider text-beam-400">
-            FIG
-          </span>
+        <figcaption className="border-t border-line px-3 py-2 text-[13px] leading-normal text-fg-3">
           {caption}
         </figcaption>
       )}
@@ -63,16 +81,33 @@ export function Figure({
         <div
           role="dialog"
           aria-modal
-          aria-label={`${alt} 확대 보기`}
+          aria-label={`${alt} 크게 보기`}
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/90 p-4 backdrop-blur-sm animate-[fadeIn_.15s_ease]"
+          className="fixed inset-0 z-[100] flex cursor-zoom-out items-center justify-center bg-black/80 p-4 sm:p-8"
         >
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="닫기"
+            className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M6 6l12 12M18 6 6 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
           <Image
             src={src}
             alt={alt}
             width={width}
             height={height}
-            className="max-h-[90vh] w-auto rounded-lg border border-line-strong shadow-glow"
+            className="h-auto max-h-[90dvh] w-auto max-w-full rounded-lg"
+            sizes="100vw"
           />
         </div>
       )}

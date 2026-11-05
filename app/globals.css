@@ -1,74 +1,202 @@
 @import "tailwindcss";
 
 /* ===========================================================================
-   OFFAIR — BSSM Broadcast Guide Book
-   Dark, electric-blue, retro-futuristic documentation theme
+   OFFAIR — 방송부 가이드북 (위키)
+   Confluence 계열의 차분한 라이트/다크 테마. 시안: OFFAIR-위키-시안 f1-layout D.
+
+   - 원본 토큰은 :root 의 --bg, --fg ... 로 두고, Tailwind 유틸리티는
+     @theme inline 으로 그 변수를 그대로 가리킨다 (bg-bg, text-fg-2 ...).
+   - 기본은 기기 설정을 따른다. 사용자가 고르면 <html data-theme="light|dark">
+     가 붙고, 그 값이 우선한다. (app/layout.tsx 의 인라인 스크립트가 칠하기 전에 적용)
    =========================================================================== */
 
-@theme {
-  /* Surfaces */
-  --color-ink-950: #04060c;
-  --color-ink-900: #06090f;
-  --color-ink-850: #080c15;
-  --color-ink-800: #0b111d;
-  --color-ink-700: #111927;
-  --color-ink-600: #1a2536;
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f7f8f9;
+  --hover: #f1f2f4;
+  --sel: #e9f2ff;
+  --fg: #172b4d;
+  --fg-2: #44546f;
+  --fg-3: #626f86;
+  --line: #dfe1e6;
+  --line-2: #ebecf0;
+  --accent: #0c66e4;
+  --accent-hover: #0055cc;
+  --accent-fg: #ffffff;
+  --accent-soft: #e9f2ff;
+  --ok: #216e4e;
+  --ok-bg: #dcfff1;
+  --warn: #a54800;
+  --warn-bg: #fff7d6;
+  --del: #ae2e24;
+  --del-bg: #ffeceb;
+  --code: #f4f5f7;
+  --lock: #6e5dc6;
+  --lock-bg: #f3f0ff;
+  --mark: #fff2b3;
+  --avatar: #ffab00;
+  --avatar-fg: #172b4d;
+  --scrim: rgba(9, 30, 66, 0.45);
+  --elev-pop: 0 10px 30px rgba(9, 30, 66, 0.12);
+  --elev-drawer: 8px 0 24px -16px rgba(0, 0, 0, 0.2);
+  color-scheme: light;
+}
 
-  /* Borders / hairlines */
-  --color-line: #16202f;
-  --color-line-strong: #233246;
+/* 다크 — 사용자가 직접 고른 경우 */
+:root[data-theme="dark"] {
+  --bg: #1d2125;
+  --bg-soft: #22272b;
+  --hover: #2c333a;
+  --sel: #1c2b41;
+  --fg: #dee4ea;
+  --fg-2: #b6c2cf;
+  --fg-3: #8c9bab;
+  --line: #384049;
+  --line-2: #2c333a;
+  --accent: #579dff;
+  --accent-hover: #85b8ff;
+  --accent-fg: #1d2125;
+  --accent-soft: #1c2b41;
+  --ok: #7ee2b8;
+  --ok-bg: #164b35;
+  --warn: #f5cd47;
+  --warn-bg: #533f04;
+  --del: #fd9891;
+  --del-bg: #5d1f1a;
+  --code: #2c333a;
+  --lock: #b8acf6;
+  --lock-bg: #2b273f;
+  --mark: #7f5f01;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --elev-pop: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --elev-drawer: 8px 0 24px -16px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
 
-  /* Text */
-  --color-fg: #dce6f2;
-  --color-fg-muted: #8295ad;
-  --color-fg-faint: #566377;
+/* 다크 — 직접 고르지 않았고 기기가 다크일 때 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d2125;
+    --bg-soft: #22272b;
+    --hover: #2c333a;
+    --sel: #1c2b41;
+    --fg: #dee4ea;
+    --fg-2: #b6c2cf;
+    --fg-3: #8c9bab;
+    --line: #384049;
+    --line-2: #2c333a;
+    --accent: #579dff;
+    --accent-hover: #85b8ff;
+    --accent-fg: #1d2125;
+    --accent-soft: #1c2b41;
+    --ok: #7ee2b8;
+    --ok-bg: #164b35;
+    --warn: #f5cd47;
+    --warn-bg: #533f04;
+    --del: #fd9891;
+    --del-bg: #5d1f1a;
+    --code: #2c333a;
+    --lock: #b8acf6;
+    --lock-bg: #2b273f;
+    --mark: #7f5f01;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --elev-pop: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --elev-drawer: 8px 0 24px -16px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
 
-  /* Electric blue accent ramp (the OFFAIR glow) */
-  --color-beam-50: #e6f4ff;
-  --color-beam-200: #a9d8ff;
-  --color-beam-400: #4fb0ff;
-  --color-beam-500: #2e9bff;
-  --color-beam-600: #1a82e6;
-  --color-cyan: #5fd4ff;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-hover: var(--hover);
+  --color-sel: var(--sel);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-del: var(--del);
+  --color-del-bg: var(--del-bg);
+  --color-code: var(--code);
+  --color-lock: var(--lock);
+  --color-lock-bg: var(--lock-bg);
+  --color-avatar: var(--avatar);
+  --color-avatar-fg: var(--avatar-fg);
+  --color-scrim: var(--scrim);
 
-  --font-display: var(--font-orbitron);
-  --font-sans: var(--font-pretendard);
-  --font-mono: var(--font-mono-stack);
+  /* 예전 테마 이름 — dev 전용 /edit 화면이 그대로 새 테마를 따르도록 남겨 둔 별칭 */
+  --color-ink-950: var(--bg);
+  --color-ink-900: var(--bg);
+  --color-ink-850: var(--bg-soft);
+  --color-ink-800: var(--bg-soft);
+  --color-ink-700: var(--hover);
+  --color-ink-600: var(--line);
+  --color-line-strong: var(--line);
+  --color-fg-muted: var(--fg-2);
+  --color-fg-faint: var(--fg-3);
+  --color-beam-50: var(--accent-soft);
+  --color-beam-200: var(--accent);
+  --color-beam-300: var(--accent);
+  --color-beam-400: var(--accent);
+  --color-beam-500: var(--accent);
+  --color-beam-600: var(--accent-hover);
+  --color-cyan: var(--accent);
 
-  --shadow-glow: 0 0 40px -8px rgba(46, 155, 255, 0.45);
+  --font-sans: var(--font-pretendard), -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Consolas,
+    monospace;
+
+  --shadow-pop: var(--elev-pop);
+  --shadow-glow: var(--elev-pop);
 }
 
 @layer base {
-  :root {
-    --font-mono-stack: "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo,
-      Consolas, monospace;
-    color-scheme: dark;
-  }
-
   * {
-    border-color: var(--color-line);
+    border-color: var(--line);
   }
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 6rem;
+    /* 위에 붙어 있는 막대(52px) 아래로 제목이 오도록 */
+    scroll-padding-top: 72px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   body {
-    background-color: var(--color-ink-950);
-    color: var(--color-fg);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv01";
+    font-size: 14px;
   }
 
   ::selection {
-    background: rgba(46, 155, 255, 0.3);
-    color: #fff;
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
   }
 
-  /* Custom scrollbar */
+  /* 키보드 포커스는 언제나 또렷하게 */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -77,216 +205,419 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-line-strong);
+    background: var(--line);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ink-600);
+    background: var(--fg-3);
     background-clip: padding-box;
   }
 }
 
+/* =========================== 앱 뼈대 (레이아웃 D) ===========================
+   rail(56) | drawer(280, 열고 닫음) | main
+   열림 상태는 <html data-drawer / data-toc> 로 칠하기 전에 정해진다.
+   ========================================================================== */
 @layer components {
-  /* Hairline grid texture used behind the hero */
-  .bg-grid {
-    background-image: linear-gradient(
-        to right,
-        rgba(46, 155, 255, 0.06) 1px,
-        transparent 1px
-      ),
-      linear-gradient(to bottom, rgba(46, 155, 255, 0.06) 1px, transparent 1px);
-    background-size: 56px 56px;
-    -webkit-mask-image: radial-gradient(
-      ellipse 80% 60% at 50% 40%,
-      #000 30%,
-      transparent 75%
-    );
-    mask-image: radial-gradient(
-      ellipse 80% 60% at 50% 40%,
-      #000 30%,
-      transparent 75%
-    );
+  .skip-link {
+    position: fixed;
+    left: 12px;
+    top: -60px;
+    z-index: 200;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-weight: 600;
+    transition: top 0.15s;
+  }
+  .skip-link:focus {
+    top: 12px;
   }
 
-  .text-glow {
-    text-shadow: 0 0 18px rgba(95, 212, 255, 0.55),
-      0 0 4px rgba(95, 212, 255, 0.7);
+  .shell {
+    display: flex;
+    min-height: 100dvh;
   }
 
-  /* The faint corner-bracket frame seen across OFFAIR screens */
-  .hud-frame {
+  .shell-rail {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: 100dvh;
+    width: 56px;
+    flex: none;
+    border-right: 1px solid var(--line-2);
+    background: var(--bg);
+  }
+
+  .shell-mtop {
+    display: none;
+  }
+
+  .shell-drawer {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 100dvh;
+    width: 280px;
+    flex: none;
+    display: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-right: 1px solid var(--line-2);
+    background: var(--bg);
+    box-shadow: var(--elev-drawer);
+  }
+  html[data-drawer="open"] .shell-drawer {
+    display: block;
+  }
+  .shell-scrim {
+    display: none;
+  }
+
+  .shell-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 위 막대 (main 안) */
+  .page-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 52px;
+    flex: none;
+    background: color-mix(in oklab, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  /* 본문 칼럼: 가운데 700px. 목차 카드가 열려 있고 자리가 되면 오른쪽에 자리를 비운다. */
+  .page-grid {
+    display: grid;
+    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(32px, 1fr);
+  }
+  .page-grid > * {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  /* 떠 있는 목차 카드 */
+  .toc-card {
+    position: fixed;
+    top: 64px;
+    right: 22px;
+    z-index: 25;
+    width: 230px;
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+    display: none;
+  }
+  html[data-toc="open"] .toc-card {
+    display: block;
+  }
+  .toc-sheet {
+    display: none;
+  }
+
+  /* 레일 아이콘 툴팁 */
+  .rail-tip {
     position: relative;
   }
-  .hud-frame::before,
-  .hud-frame::after {
-    content: "";
+  .rail-tip::after {
+    content: attr(data-tip);
     position: absolute;
-    width: 14px;
-    height: 14px;
-    border: 1px solid var(--color-beam-500);
-    opacity: 0.5;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 60;
   }
-  .hud-frame::before {
-    top: 0;
-    left: 0;
-    border-right: 0;
-    border-bottom: 0;
-  }
-  .hud-frame::after {
-    bottom: 0;
-    right: 0;
-    border-left: 0;
-    border-top: 0;
+  .rail-tip:hover::after,
+  .rail-tip:focus-visible::after {
+    opacity: 1;
   }
 }
 
-/* ============================ MDX prose ============================ */
+/* 서랍이 닫혀 있으면 main 이 넓다 → 1024px 부터 목차 자리를 비울 수 있다 */
+@media (min-width: 1024px) {
+  html[data-toc="open"]:not([data-drawer="open"]) .page-grid {
+    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(270px, 1fr);
+  }
+}
+/* 서랍이 열려 있으면 1280px 부터 */
+@media (min-width: 1280px) {
+  html[data-toc="open"] .page-grid {
+    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(270px, 1fr);
+  }
+}
+
+/* ============================== 모바일 (≤768px) ============================ */
+@media (max-width: 768px) {
+  .shell {
+    flex-direction: column;
+  }
+  .shell-rail {
+    display: none;
+  }
+  .shell-mtop {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    height: 52px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px 0 14px;
+    border-bottom: 1px solid var(--line-2);
+    background: var(--bg);
+  }
+
+  /* 서랍은 왼쪽에서 밀려 나오는 시트 */
+  .shell-drawer,
+  html[data-drawer="open"] .shell-drawer {
+    display: block;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 70;
+    width: min(320px, 86vw);
+    height: auto;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition:
+      transform 0.22s ease,
+      visibility 0s linear 0.22s;
+  }
+  .shell-drawer[data-sheet="open"] {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+  .shell-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .shell-scrim[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .page-bar {
+    position: static;
+    height: 46px;
+    background: var(--bg);
+    backdrop-filter: none;
+  }
+  .page-grid {
+    grid-template-columns: 16px minmax(0, 1fr) 16px;
+  }
+
+  /* 목차는 아래에서 올라오는 시트 */
+  .toc-card,
+  html[data-toc="open"] .toc-card {
+    display: none;
+  }
+  .toc-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    max-height: 65dvh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    background: var(--bg);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    padding: 8px 18px calc(18px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 0.22s ease,
+      visibility 0s linear 0.22s;
+  }
+  .toc-sheet[data-open="true"] {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s ease;
+  }
+}
+
+/* ================================ MDX 본문 ================================= */
+@layer components {
 .prose {
-  color: var(--color-fg);
-  font-size: 1rem;
+  color: var(--fg);
+  font-size: 17px;
   line-height: 1.75;
+  overflow-wrap: break-word;
+  word-break: keep-all;
 }
 .prose > * + * {
-  margin-top: 1.15em;
+  margin-top: 0.85em;
 }
-.prose h1,
 .prose h2,
 .prose h3,
 .prose h4 {
-  font-family: var(--font-sans);
   font-weight: 700;
-  color: #fff;
+  color: var(--fg);
   letter-spacing: -0.01em;
-  scroll-margin-top: 6rem;
+  line-height: 1.4;
 }
 .prose h2 {
-  margin-top: 2.6em;
-  margin-bottom: 0.2em;
-  font-size: 1.6rem;
-  padding-bottom: 0.4em;
-  border-bottom: 1px solid var(--color-line);
+  margin-top: 2.1em;
+  margin-bottom: 0.1em;
+  font-size: 22px;
 }
 .prose h3 {
-  margin-top: 1.9em;
-  font-size: 1.25rem;
+  margin-top: 1.8em;
+  font-size: 18.5px;
 }
 .prose h4 {
   margin-top: 1.5em;
-  font-size: 1.05rem;
-}
-.prose p {
-  color: var(--color-fg);
+  font-size: 17px;
 }
 .prose a {
-  color: var(--color-beam-400);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(79, 176, 255, 0.35);
-  transition: border-color 0.15s, color 0.15s;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
 }
 .prose a:hover {
-  color: var(--color-beam-200);
-  border-bottom-color: var(--color-beam-200);
+  text-decoration-color: var(--accent);
 }
 .prose strong {
-  color: #fff;
   font-weight: 700;
 }
 .prose ul,
 .prose ol {
-  padding-left: 1.4em;
+  padding-left: 1.5em;
 }
 .prose ul {
-  list-style: none;
+  list-style: disc;
 }
-.prose ul > li {
-  position: relative;
-}
-.prose ul > li::before {
-  content: "";
-  position: absolute;
-  left: -1.1em;
-  top: 0.7em;
-  width: 6px;
-  height: 6px;
-  background: var(--color-beam-500);
-  transform: rotate(45deg);
+.prose ul ul {
+  list-style: circle;
 }
 .prose ol {
   list-style: decimal;
 }
-.prose ol > li::marker {
-  color: var(--color-beam-400);
-  font-family: var(--font-display);
+.prose li::marker {
+  color: var(--fg-3);
 }
 .prose li {
-  margin-top: 0.4em;
+  margin-top: 0.3em;
+  padding-left: 0.15em;
+}
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0.3em;
 }
 .prose blockquote {
-  border-left: 2px solid var(--color-beam-500);
-  padding-left: 1.1em;
-  color: var(--color-fg-muted);
-  font-style: italic;
+  border-left: 3px solid var(--line);
+  padding-left: 1em;
+  color: var(--fg-2);
 }
-/* Inline code */
+/* 인라인 코드 */
 .prose :not(pre) > code {
   font-family: var(--font-mono);
-  font-size: 0.85em;
-  background: var(--color-ink-700);
-  border: 1px solid var(--color-line);
-  border-radius: 5px;
-  padding: 0.15em 0.4em;
-  color: var(--color-beam-200);
+  font-size: 0.86em;
+  background: var(--code);
+  border-radius: 4px;
+  padding: 0.12em 0.38em;
+  color: var(--fg);
 }
 .prose hr {
   border: 0;
-  border-top: 1px solid var(--color-line);
-  margin: 2.5em 0;
+  border-top: 1px solid var(--line);
+  margin: 2.4em 0;
 }
-/* Screenshot images from the guide */
+.prose mark {
+  background: var(--mark);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+/* 마크다운으로 넣은 이미지 */
 .prose img {
   display: block;
-  max-width: min(100%, 760px);
+  max-width: 100%;
   height: auto;
-  margin: 1.5em auto;
-  border: 1px solid var(--color-line);
-  border-radius: 0.6rem;
-  background: var(--color-ink-900);
+  margin: 1.2em auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
+.prose figure img,
+.prose .mdx-plain-img img {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+}
+/* 표: 옅은 테두리 + 부드러운 머리줄 */
 .prose table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: 15px;
+  line-height: 1.6;
 }
 .prose th,
 .prose td {
-  border: 1px solid var(--color-line);
-  padding: 0.6em 0.9em;
+  border: 1px solid var(--line);
+  padding: 8px 12px;
   text-align: left;
+  vertical-align: top;
 }
 .prose thead th {
-  background: var(--color-ink-800);
-  color: #fff;
+  background: var(--bg-soft);
   font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
-.prose tbody tr:nth-child(even) {
-  background: rgba(11, 17, 29, 0.5);
+.prose .mdx-table th:first-child,
+.prose .mdx-table td:first-child {
+  border-left: 0;
+}
+.prose .mdx-table th:last-child,
+.prose .mdx-table td:last-child {
+  border-right: 0;
+}
+.prose .mdx-table thead tr:first-child th {
+  border-top: 0;
+}
+.prose .mdx-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
-/* Shiki (rehype-pretty-code) */
+/* 코드 블록 (rehype-pretty-code, 라이트/다크 두 테마) */
 .prose figure[data-rehype-pretty-code-figure] {
   margin: 0;
 }
 .prose pre {
   overflow-x: auto;
-  padding: 1.1rem 0;
-  background: #060a12 !important;
-  font-size: 0.85rem;
-  line-height: 1.6;
+  padding: 14px 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  background: transparent !important;
 }
 .prose pre code {
   display: grid;
@@ -295,12 +626,12 @@
   counter-reset: line;
 }
 .prose pre code [data-line] {
-  padding: 0 1.2rem;
+  padding: 0 16px;
   border-left: 2px solid transparent;
 }
 .prose pre code [data-highlighted-line] {
-  background: rgba(46, 155, 255, 0.1);
-  border-left-color: var(--color-beam-500);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-left-color: var(--accent);
 }
 .prose code[data-line-numbers] > [data-line]::before {
   counter-increment: line;
@@ -309,7 +640,19 @@
   width: 1.4rem;
   margin-right: 1.2rem;
   text-align: right;
-  color: var(--color-fg-faint);
+  color: var(--fg-3);
+}
+.prose pre code span {
+  color: var(--shiki-light);
+}
+:root[data-theme="dark"] .prose pre code span {
+  color: var(--shiki-dark);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .prose pre code span {
+    color: var(--shiki-dark);
+  }
+}
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,18 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteBackground } from "@/components/site-background";
+import { AppShell } from "@/components/shell/app-shell";
+import { PREFS_SCRIPT } from "@/components/shell/prefs-script";
 import { getNav, getSearchIndex } from "@/lib/content";
-import { IS_DEV } from "@/lib/dev";
-
-const orbitron = localFont({
-  src: "./fonts/Orbitron.ttf",
-  variable: "--font-orbitron",
-  weight: "400 900",
-  display: "swap",
-});
 
 const pretendard = localFont({
   src: "./fonts/PretendardVariable.ttf",
@@ -23,17 +14,24 @@ const pretendard = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "OFFAIR — BSSM Broadcast Guide Book",
+    default: "OFFAIR — 방송부 가이드북",
     template: "%s · OFFAIR",
   },
   description:
     "부산소프트웨어마이스터고 방송부 OFFAIR 의 장비·송출·운영 가이드북.",
   metadataBase: new URL("https://offair.local"),
   openGraph: {
-    title: "OFFAIR — BSSM Broadcast Guide Book",
+    title: "OFFAIR — 방송부 가이드북",
     description: "부산소프트웨어마이스터고 방송부 운영 가이드북",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d2125" },
+  ],
 };
 
 export default function RootLayout({
@@ -42,16 +40,15 @@ export default function RootLayout({
   const nav = getNav();
   const searchIndex = getSearchIndex();
   return (
-    <html
-      lang="ko"
-      className={`${orbitron.variable} ${pretendard.variable} h-full`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-full flex flex-col bg-ink-950">
-        <SiteBackground />
-        <SiteHeader nav={nav} searchIndex={searchIndex} devEdit={IS_DEV} />
-        <div className="flex-1">{children}</div>
-        <SiteFooter />
+    <html lang="ko" className={pretendard.variable} suppressHydrationWarning>
+      <head>
+        {/* 테마·서랍·목차 상태를 칠하기 전에 <html> 에 붙인다 (깜빡임 방지) */}
+        <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
+      </head>
+      <body>
+        <AppShell nav={nav} searchIndex={searchIndex}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

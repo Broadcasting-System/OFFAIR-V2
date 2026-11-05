@@ -493,7 +493,7 @@ function Toolbar({
   onAddCat: () => void;
 }) {
   return (
-    <div className="sticky top-16 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink-900/80 px-4 py-3 backdrop-blur">
+    <div className="sticky top-0 z-10 max-[768px]:top-[52px] flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink-900/80 px-4 py-3 backdrop-blur">
       <p className="text-sm text-fg-muted">
         손잡이를 끌어 문서·카테고리 순서를 바꾸고{" "}
         <strong className="text-fg">저장</strong>하세요.
@@ -501,7 +501,7 @@ function Toolbar({
       <button
         type="button"
         onClick={onAddCat}
-        className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted transition-colors hover:border-line-strong hover:text-white"
+        className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
       >
         + 카테고리
       </button>
@@ -609,7 +609,7 @@ function NewDocForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted hover:text-white"
+          className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted hover:text-fg"
         >
           취소
         </button>

@@ -1,42 +1,27 @@
-import { Logo } from "./logo";
+import Link from "next/link";
 
+/** 본문 칼럼 맨 아래의 작은 바닥글. */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-ink-950">
-      <div className="mx-auto flex max-w-[90rem] flex-col gap-4 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
-        <div>
-          <Logo withTagline />
-          <p className="mt-3 text-xs text-fg-faint">
-            © {new Date().getFullYear()} BSSM Broadcast · OFFAIR. 방송부 내부
-            가이드 문서.
-          </p>
-          <p className="mt-2 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-fg-faint">
-            Made by{" "}
-            <span className="text-beam-400">BSSM Broadcaster 4th</span> · 서정현
-          </p>
-        </div>
-        <div className="flex gap-6 font-mono text-xs uppercase tracking-wider text-fg-muted">
+    <footer className="mt-auto border-t border-line-2">
+      <div className="flex flex-col gap-2 px-4 py-6 text-xs text-fg-3 sm:flex-row sm:items-center sm:justify-between sm:px-[22px]">
+        <p>
+          © {new Date().getFullYear()} BSSM Broadcast · OFFAIR · Made by BSSM
+          Broadcaster 4th · 서정현
+        </p>
+        <nav aria-label="바닥글" className="flex gap-4">
+          <Link href="/contribution" className="rounded hover:text-fg">
+            문서 기여하기
+          </Link>
           <a
             href="https://github.com/Broadcasting-System/OFFAIR-V2"
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors hover:text-beam-300"
+            className="rounded hover:text-fg"
           >
             GitHub
           </a>
-          <a
-            href="/docs/intro"
-            className="transition-colors hover:text-beam-300"
-          >
-            Docs
-          </a>
-          <a
-            href="/contribution"
-            className="transition-colors hover:text-beam-300"
-          >
-            Contribute
-          </a>
-        </div>
+        </nav>
       </div>
     </footer>
   );

@@ -17,7 +17,7 @@ npm start       # 빌드 결과 실행
 - **`/edit`** — 문서를 **제목**으로 보여주는 관리 화면. 드래그로 사이드바(문서·카테고리)
   순서를 바꾸고 **레이아웃 저장**, **새 문서 만들기**, **삭제**, 카테고리 추가/이름변경.
 - **`/edit/<경로>`** — 단일 문서 편집기(좌: MDX 원문 / 우: 실시간 프리뷰, `⌘S` 저장).
-- 각 문서 페이지 우하단의 **수정** 플로팅 버튼, 헤더의 **✎ Edit** 링크로 진입.
+- 각 문서 위 막대의 **편집** 버튼(dev 에서만 동작, 프로덕션에선 비활성)으로 진입. `/edit` 는 주소로 직접.
 
 사이드바 순서는 `content/sidebar.json`(카테고리 순서) + 각 문서 frontmatter의
 `category`/`order` 로 결정되며, 위 UI가 이 둘을 모두 써줍니다.
@@ -57,14 +57,17 @@ import 없이 MDX 안에서 사용합니다. 전체 예시는 `content/docs/gett
 ## 구조
 
 ```
-app/                  라우트 (홈=히어로, /docs/[...slug], /contribution)
-components/            레이아웃 + MDX 컴포넌트
-  mdx/                MDX에 주입되는 컴포넌트 맵
+app/                  라우트 (홈, /docs/[...slug], /recent, /members, /contribution)
+components/shell/     레이아웃 D: 아이콘 레일 · 문서 트리 서랍 · 위 막대 · 화면 설정(테마/서랍/목차)
+components/doc/       문서 화면 (제목 · 메타 · 이전/다음)
+components/mdx/       MDX에 주입되는 컴포넌트 맵
 lib/content.ts        content/ 스캔 · 사이드바/목차 생성
+lib/doc-info.ts       수정일(파일 mtime) · 작성자(frontmatter author) · 읽는 시간
 lib/mdx.tsx           @mdx-js/mdx 로 RSC에서 컴파일·렌더
 content/docs/*.mdx    실제 문서
-public/background.png 히어로 배경
-app/fonts/            Orbitron · Pretendard (로컬 폰트)
+app/fonts/            Pretendard (로컬 폰트)
 ```
 
-폰트: **Orbitron**(로고·핵심 텍스트), **Pretendard**(본문) — `next/font/local` 로 로드.
+테마: `app/globals.css` 의 CSS 토큰(라이트 기본, `[data-theme="dark"]` 와 기기 다크 설정).
+레일의 달 아이콘으로 바꾸면 localStorage 에 저장되고, 기기 설정과 같아지면 다시 "기기 따라가기"로 돌아갑니다.
+폰트: **Pretendard** — `next/font/local` 로 로드.

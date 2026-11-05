@@ -2,23 +2,25 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-      <p className="font-display text-7xl font-extrabold text-white text-glow">
-        OFF<span className="text-beam-400">AIR</span>
+    <main
+      id="main"
+      tabIndex={-1}
+      className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center outline-none"
+    >
+      <p className="text-[56px] leading-none font-extrabold tracking-[0.04em] text-fg">
+        404
       </p>
-      <p className="mt-4 font-mono text-sm uppercase tracking-[0.2em] text-fg-faint">
-        404 · Signal lost
-      </p>
-      <p className="mt-3 max-w-sm text-fg-muted">
-        찾으시는 문서가 송출 중이 아닙니다. 페이지가 이동했거나 삭제되었을 수
-        있어요.
+      <h1 className="mt-4 text-[20px] font-bold text-fg">문서를 찾을 수 없어요</h1>
+      <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-fg-2">
+        페이지가 옮겨졌거나 지워졌을 수 있어요. 왼쪽 문서 트리나 검색(⌘K)으로
+        찾아보세요.
       </p>
       <Link
         href="/"
-        className="mt-7 rounded-lg bg-beam-500 px-5 py-2.5 font-medium text-ink-950 transition-colors hover:bg-beam-400"
+        className="mt-6 inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
       >
-        홈으로 돌아가기
+        홈으로
       </Link>
-    </div>
+    </main>
   );
 }

@@ -56,17 +56,22 @@ export function SearchDialog({
 
   const results = useMemo(() => search(index, query).slice(0, 30), [index, query]);
 
-  // reset + focus on open
-  useEffect(() => {
+  // 열릴 때마다 검색어 초기화 (렌더 중 상태 조정 패턴)
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
     if (open) {
       setQuery("");
       setActive(0);
-      const t = setTimeout(() => inputRef.current?.focus(), 20);
-      return () => clearTimeout(t);
     }
-  }, [open]);
+  }
 
-  useEffect(() => setActive(0), [query]);
+  // 열리면 입력 칸에 포커스
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 20);
+    return () => clearTimeout(t);
+  }, [open]);
 
   // lock scroll while open
   useEffect(() => {
@@ -110,17 +115,17 @@ export function SearchDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]"
+      className="fixed inset-0 z-[100] flex items-start justify-center px-3 pt-[8vh] sm:px-4 sm:pt-[12vh]"
       role="dialog"
       aria-modal
       aria-label="문서 검색"
     >
       <div
-        className="absolute inset-0 bg-ink-950/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim"
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-xl overflow-hidden rounded-xl border border-line-strong bg-ink-900 shadow-glow"
+        className="relative w-full max-w-[640px] overflow-hidden rounded-[10px] border border-line bg-bg shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
         onKeyDown={onKeyDown}
       >
         <div className="flex items-center gap-3 border-b border-line px-4">
@@ -128,18 +133,27 @@ export function SearchDialog({
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActive(0);
+            }}
             placeholder="문서 검색…"
-            className="w-full bg-transparent py-3.5 text-sm text-fg outline-none placeholder:text-fg-faint"
+            aria-label="검색어"
+            className="w-full bg-transparent py-3.5 text-[16px] text-fg outline-none placeholder:text-fg-3"
           />
-          <kbd className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-[0.7rem] text-fg-faint">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-line px-1.5 py-0.5 text-[11px] text-fg-3 hover:text-fg"
+            aria-label="검색 닫기"
+          >
             ESC
-          </kbd>
+          </button>
         </div>
 
-        <ul ref={listRef} className="max-h-[55vh] overflow-y-auto p-2">
+        <ul ref={listRef} className="max-h-[60dvh] overflow-y-auto p-1.5">
           {results.length === 0 && (
-            <li className="px-3 py-8 text-center text-sm text-fg-faint">
+            <li className="px-3 py-8 text-center text-sm text-fg-3">
               검색 결과가 없습니다
             </li>
           )}
@@ -149,23 +163,23 @@ export function SearchDialog({
                 type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => go(r.url)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
-                  i === active ? "bg-beam-500/15" : "hover:bg-ink-800"
+                className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left ${
+                  i === active ? "bg-sel" : ""
                 }`}
               >
                 <span className="min-w-0 flex-1">
                   <span
-                    className={`block truncate text-sm ${
-                      i === active ? "text-beam-200" : "text-fg"
+                    className={`block truncate text-[14.5px] font-semibold ${
+                      i === active ? "text-accent" : "text-fg"
                     }`}
                   >
                     {r.title}
                   </span>
-                  <span className="block truncate text-xs text-fg-faint">
+                  <span className="mt-0.5 block truncate text-[13px] text-fg-2">
                     {r.hit ?? r.description}
                   </span>
                 </span>
-                <span className="shrink-0 rounded border border-line px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-fg-muted">
+                <span className="hidden shrink-0 text-xs text-fg-3 sm:inline">
                   {r.category}
                 </span>
               </button>
@@ -173,7 +187,7 @@ export function SearchDialog({
           ))}
         </ul>
 
-        <div className="flex items-center gap-4 border-t border-line px-4 py-2 font-mono text-[0.65rem] text-fg-faint">
+        <div className="hidden items-center gap-4 border-t border-line px-4 py-2 text-xs text-fg-3 sm:flex">
           <span>
             <kbd className="rounded border border-line px-1">↑</kbd>{" "}
             <kbd className="rounded border border-line px-1">↓</kbd> 이동
@@ -194,7 +208,7 @@ function SearchIcon() {
       height="16"
       viewBox="0 0 24 24"
       fill="none"
-      className="shrink-0 text-fg-faint"
+      className="shrink-0 text-fg-3"
       aria-hidden
     >
       <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />

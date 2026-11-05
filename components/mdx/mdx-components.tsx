@@ -7,40 +7,16 @@ import { Figure } from "./figure";
 
 type CalloutType = "note" | "tip" | "warn" | "danger" | "info";
 
+/** 부드러운 색 배경 + 8px 둥근 모서리. 굵은 테두리 없음. */
 const CALLOUT: Record<
   CalloutType,
-  { label: string; accent: string; bg: string; icon: React.ReactNode }
+  { label: string; box: string; tone: string; icon: React.ReactNode }
 > = {
-  note: {
-    label: "NOTE",
-    accent: "text-fg-muted border-line-strong",
-    bg: "bg-ink-800/50",
-    icon: <DotIcon />,
-  },
-  info: {
-    label: "INFO",
-    accent: "text-beam-400 border-beam-500/40",
-    bg: "bg-beam-500/[0.06]",
-    icon: <InfoIcon />,
-  },
-  tip: {
-    label: "TIP",
-    accent: "text-emerald-300 border-emerald-400/40",
-    bg: "bg-emerald-400/[0.06]",
-    icon: <BulbIcon />,
-  },
-  warn: {
-    label: "주의",
-    accent: "text-amber-300 border-amber-400/40",
-    bg: "bg-amber-400/[0.06]",
-    icon: <WarnIcon />,
-  },
-  danger: {
-    label: "경고",
-    accent: "text-rose-300 border-rose-400/40",
-    bg: "bg-rose-400/[0.07]",
-    icon: <WarnIcon />,
-  },
+  note: { label: "참고", box: "bg-bg-soft", tone: "text-fg-2", icon: <NoteIcon /> },
+  info: { label: "알아두기", box: "bg-accent-soft", tone: "text-accent", icon: <InfoIcon /> },
+  tip: { label: "팁", box: "bg-ok-bg", tone: "text-ok", icon: <BulbIcon /> },
+  warn: { label: "주의", box: "bg-warn-bg", tone: "text-warn", icon: <WarnIcon /> },
+  danger: { label: "경고", box: "bg-del-bg", tone: "text-del", icon: <WarnIcon /> },
 };
 
 function Callout({
@@ -52,24 +28,16 @@ function Callout({
   title?: string;
   children: React.ReactNode;
 }) {
-  const c = CALLOUT[type];
+  const c = CALLOUT[type] ?? CALLOUT.note;
   return (
     <div
-      className={`my-6 rounded-lg border ${c.accent} ${c.bg} px-4 py-3.5`}
+      className={`my-5 flex gap-2.5 rounded-lg px-3.5 py-3 text-[15.5px] leading-relaxed ${c.box}`}
       role="note"
     >
-      <div className="flex items-center gap-2">
-        <span className={c.accent.split(" ")[0]}>{c.icon}</span>
-        <span
-          className={`font-mono text-xs font-semibold uppercase tracking-wider ${
-            c.accent.split(" ")[0]
-          }`}
-        >
-          {title ?? c.label}
-        </span>
-      </div>
-      <div className="mt-2 text-[0.95rem] leading-relaxed text-fg [&>*+*]:mt-2 [&_p]:m-0">
-        {children}
+      <span className={`mt-[3px] ${c.tone}`}>{c.icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className={`!mt-0 font-bold ${c.tone}`}>{title ?? c.label}</p>
+        <div className="mt-0.5 text-fg [&>*+*]:mt-2 [&_p]:m-0">{children}</div>
       </div>
     </div>
   );
@@ -78,11 +46,7 @@ function Callout({
 /* ───────────────────────── Steps (procedures) ───────────────────────── */
 
 function Steps({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mdx-steps my-6 ml-3 border-l border-line pl-7 [counter-reset:step]">
-      {children}
-    </div>
-  );
+  return <div className="my-6 [counter-reset:step]">{children}</div>;
 }
 
 function Step({
@@ -93,25 +57,25 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative pb-7 last:pb-0 [counter-increment:step]">
+    <div className="relative pb-6 pl-10 [counter-increment:step] last:pb-0 before:absolute before:top-8 before:bottom-1.5 before:left-[13px] before:w-px before:bg-line-2 last:before:hidden">
       <span
         aria-hidden
-        className="absolute -left-[3.05rem] flex size-7 items-center justify-center rounded-full border border-beam-500/50 bg-ink-900 font-display text-sm font-bold text-beam-300 before:content-[counter(step)]"
+        className="absolute top-0 left-0 grid size-[27px] place-items-center rounded-full bg-accent-soft text-[13px] font-bold text-accent before:content-[counter(step)]"
       />
-      <h4 className="!mt-0 mb-1 font-semibold text-white">{title}</h4>
-      <div className="text-[0.95rem] leading-relaxed text-fg-muted [&>*+*]:mt-2 [&_p]:m-0">
+      <h4 className="!mt-0 text-[17px] leading-[27px] font-semibold text-fg">
+        {title}
+      </h4>
+      <div className="mt-1 text-[16px] leading-relaxed text-fg-2 [&>*+*]:mt-2 [&_p]:m-0">
         {children}
       </div>
     </div>
   );
 }
 
-/* ───────────────────────── Cards (landing / link grid) ──────────────── */
+/* ───────────────────────── Cards (link grid) ──────────────── */
 
 function CardGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="my-6 grid gap-4 sm:grid-cols-2">{children}</div>
-  );
+  return <div className="my-6 grid gap-3 sm:grid-cols-2">{children}</div>;
 }
 
 function Card({
@@ -125,23 +89,28 @@ function Card({
 }) {
   const inner = (
     <>
-      <div className="flex items-center justify-between">
-        <h4 className="!mt-0 font-semibold text-white">{title}</h4>
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[15.5px] font-semibold text-fg group-hover:text-accent">
+          {title}
+        </span>
         {href && (
-          <span className="text-beam-400 transition-transform group-hover:translate-x-0.5">
+          <span
+            aria-hidden
+            className="text-fg-3 transition-transform group-hover:translate-x-0.5 group-hover:text-accent"
+          >
             →
           </span>
         )}
-      </div>
+      </span>
       {children && (
-        <div className="mt-1.5 text-sm leading-relaxed text-fg-muted [&_p]:m-0 [&_p]:text-fg-muted">
+        <span className="mt-1 block text-[14px] leading-relaxed text-fg-2 [&_p]:m-0">
           {children}
-        </div>
+        </span>
       )}
     </>
   );
   const cls =
-    "group block rounded-lg border border-line bg-ink-850 p-4 transition-colors hover:border-beam-500/50 hover:bg-ink-800";
+    "group block rounded-[10px] border border-line bg-bg px-4 py-3.5 !no-underline transition-colors hover:border-accent hover:bg-bg-soft";
   return href ? (
     <Link href={href} className={cls}>
       {inner}
@@ -155,7 +124,7 @@ function Card({
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex min-w-[1.6em] items-center justify-center rounded border border-line-strong border-b-2 bg-ink-700 px-1.5 py-0.5 font-mono text-[0.78em] text-fg shadow-sm">
+    <kbd className="inline-flex min-w-[1.6em] items-center justify-center rounded-[5px] border border-b-2 border-line bg-bg-soft px-1.5 py-px font-sans text-[0.8em] font-medium text-fg">
       {children}
     </kbd>
   );
@@ -169,13 +138,13 @@ function Badge({
   tone?: "beam" | "muted" | "warn";
 }) {
   const tones = {
-    beam: "border-beam-500/40 text-beam-300 bg-beam-500/10",
-    muted: "border-line-strong text-fg-muted bg-ink-800",
-    warn: "border-amber-400/40 text-amber-300 bg-amber-400/10",
+    beam: "bg-accent-soft text-accent",
+    muted: "bg-hover text-fg-2",
+    warn: "bg-warn-bg text-warn",
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[0.7rem] font-medium uppercase tracking-wider ${tones[tone]}`}
+      className={`inline-flex items-center rounded-full px-2 py-px align-[0.1em] text-[0.75em] font-semibold ${tones[tone] ?? tones.beam}`}
     >
       {children}
     </span>
@@ -191,20 +160,16 @@ function anchored(Tag: "h2" | "h3" | "h4") {
     ...props
   }: React.HTMLAttributes<HTMLHeadingElement>) {
     return (
-      <Tag id={id} {...props} className="group/h scroll-mt-24">
-        {id ? (
+      <Tag id={id} {...props} className="group/h relative">
+        {children}
+        {id && (
           <a
             href={`#${id}`}
-            className="!border-0 no-underline"
-            aria-label={`${String(children)} 섹션 링크`}
+            className="ml-2 inline-block rounded px-1 text-fg-3 !no-underline opacity-0 transition-opacity group-hover/h:opacity-100 focus-visible:opacity-100"
+            aria-label="이 제목 링크"
           >
-            {children}
-            <span className="ml-2 select-none text-beam-500 opacity-0 transition-opacity group-hover/h:opacity-100">
-              #
-            </span>
+            #
           </a>
-        ) : (
-          children
         )}
       </Tag>
     );
@@ -224,6 +189,13 @@ function Anchor({
       </a>
     );
   }
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    );
+  }
   return (
     <Link href={href} {...props}>
       {children}
@@ -233,8 +205,8 @@ function Anchor({
 
 function Table({ children }: React.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="my-6 overflow-x-auto rounded-lg border border-line">
-      <table>{children}</table>
+    <div className="my-5 overflow-x-auto rounded-lg border border-line">
+      <table className="mdx-table">{children}</table>
     </div>
   );
 }
@@ -260,10 +232,15 @@ export const mdxComponents: MDXComponents = {
 
 /* ───────────────────────── Icons ───────────────────────── */
 
-function DotIcon() {
+function NoteIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="3" fill="currentColor" />
+      <path
+        d="M7 3h7l5 5v13H7z M14 3v5h5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

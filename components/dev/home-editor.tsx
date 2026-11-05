@@ -37,7 +37,7 @@ export function HomeEditor({ initial }: { initial: HomeConfig }) {
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/edit"
-          className="text-fg-muted transition-colors hover:text-white"
+          className="text-fg-muted transition-colors hover:text-fg"
         >
           ←
         </Link>
@@ -56,7 +56,7 @@ export function HomeEditor({ initial }: { initial: HomeConfig }) {
           )}
           <Link
             href="/"
-            className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted hover:text-white"
+            className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted hover:text-fg"
           >
             홈 보기
           </Link>
@@ -83,7 +83,7 @@ export function HomeEditor({ initial }: { initial: HomeConfig }) {
               {cfg.eyebrow}
             </p>
           )}
-          <h2 className="font-display text-5xl font-extrabold text-white text-glow">
+          <h2 className="font-display text-5xl font-extrabold text-fg">
             {cfg.title || "—"}
           </h2>
           {cfg.description && (

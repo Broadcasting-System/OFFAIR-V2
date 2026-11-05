@@ -9,7 +9,8 @@ import rehypePrettyCode, {
 import { mdxComponents } from "@/components/mdx/mdx-components";
 
 const prettyCodeOptions: PrettyCodeOptions = {
-  theme: "github-dark-default",
+  // 라이트/다크 두 테마를 함께 내보낸다 (색은 globals.css 에서 --shiki-light/dark 로 고름)
+  theme: { light: "github-light", dark: "github-dark-default" },
   keepBackground: false,
   defaultLang: "plaintext",
 };
