@@ -1,0 +1,20 @@
+/* OFFAIR 글자 로고 색 — 예전 가이드북의 전기 파랑(beam)과 빛(cyan glow).
+   흰 배경에선 읽히게 한 단계 진한 파랑, 어두운 배경에선 예전 사이트처럼 빛나게. */
+:root {
+  --offair-logo: #1a82e6;
+  --offair-logo-glow: none;
+}
+:root[data-theme="dark"] {
+  --offair-logo: #4fb0ff;
+  --offair-logo-glow: 0 0 14px rgba(95, 212, 255, 0.45), 0 0 3px rgba(95, 212, 255, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --offair-logo: #4fb0ff;
+    --offair-logo-glow: 0 0 14px rgba(95, 212, 255, 0.45), 0 0 3px rgba(95, 212, 255, 0.6);
+  }
+}
+.offair-logo {
+  color: var(--offair-logo);
+  text-shadow: var(--offair-logo-glow);
+}
