@@ -308,14 +308,14 @@ export function CommentLayer({ children }: { children: React.ReactNode }) {
           {activeBox && activeTop !== undefined && (
             <svg aria-hidden className="pointer-events-none absolute top-0 left-0 overflow-visible" width="1" height="1" data-cmt-ui>
               <path
-                d={`M ${activeBox.x + activeBox.w} ${activeBox.y + activeBox.h} H ${geo.width + 12} V ${activeTop + 18} H ${geo.width + 24}`}
+                d={`M ${activeBox.x + activeBox.w} ${activeBox.y + activeBox.h} H ${geo.width + 10} V ${activeTop + 18} H ${geo.width + 20}`}
                 fill="none"
                 stroke="#f5cd47"
                 strokeWidth="1.5"
               />
             </svg>
           )}
-          <div className="cmt-margin absolute top-0 w-[290px]" style={{ left: "calc(100% + 24px)" }} data-cmt-ui>
+          <div className="cmt-margin absolute top-0 w-[280px]" style={{ left: "calc(100% + 20px)" }} data-cmt-ui>
             {order.map((id) => {
               const t = threads.get(id);
               const isDraft = id === DRAFT;

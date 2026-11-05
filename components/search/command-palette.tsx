@@ -439,7 +439,7 @@ function Marked({ text, tokens }: { text: string; tokens: string[] }) {
     <>
       {highlight(text, tokens).map((s, i) =>
         s.mark ? (
-          <mark key={i} className="rounded-[2px] bg-mark px-px text-inherit">
+          <mark key={i} className="rounded-[2px] bg-[var(--mark)] px-px text-[inherit]">
             {s.text}
           </mark>
         ) : (

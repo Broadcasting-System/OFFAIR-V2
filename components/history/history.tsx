@@ -199,13 +199,14 @@ export function HistoryButton() {
       onClick={() => setOpen(!open)}
       aria-expanded={open}
       aria-controls="history-panel"
+      aria-label="수정 기록"
       title="수정 기록 (H)"
       className={`inline-flex h-8 flex-none items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors ${
         open ? "bg-sel text-accent" : "font-medium text-fg-2 hover:bg-hover"
       }`}
     >
       <HistoryIcon size={16} />
-      기록
+      <span className="max-[480px]:hidden">기록</span>
     </button>
   );
 }
