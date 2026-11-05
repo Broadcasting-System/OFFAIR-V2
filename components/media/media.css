@@ -1,0 +1,937 @@
+/* ===========================================================================
+   OFFAIR 위키 — 미디어 컴포넌트 (넣기 창 · 표시 달기)
+   시안: OFFAIR-위키-시안 f5-upload B(넣기 창), D(표시 달기)
+
+   모든 색은 .wiki-media 아래 --wm-* 변수로만 쓴다.
+   각 변수는 셸 테마 토큰(app/globals.css 의 --bg, --fg …)이 있으면 그걸 따르고,
+   없으면 괄호 안 기본값(시안 팔레트)을 쓴다. 셸에 맞춰 바꿀 때는 이 표만 고치면 된다.
+
+     --wm-bg          ← --bg           바탕 (창·카드)
+     --wm-bg-soft     ← --bg-soft      옅은 바탕 (표시 달기 작업대)
+     --wm-hover       ← --hover        올렸을 때
+     --wm-sel         ← --sel          고른 항목 바탕
+     --wm-fg          ← --fg           본문 글자
+     --wm-fg-2        ← --fg-2         보조 글자
+     --wm-fg-3        ← --fg-3         흐린 글자·힌트
+     --wm-line        ← --line         테두리
+     --wm-line-2      ← --line-2       옅은 구분선
+     --wm-accent      ← --accent       강조(파랑)
+     --wm-accent-hover← --accent-hover
+     --wm-accent-fg   ← --accent-fg    강조 위 글자
+     --wm-accent-soft ← --accent-soft  강조 옅은 바탕(끌어 놓기 칸)
+     --wm-danger      ← --del          오류 글자
+     --wm-danger-bg   ← --del-bg       오류 바탕
+     --wm-ok          ← --ok           완료 글자
+     --wm-scrim       ← --scrim        창 뒤 어둡게
+     --wm-elev        ← --elev-pop     창 그림자 (진하게 따로 둠)
+     --wm-font        ← --font-pretendard
+
+   그림에 구워지는 표시 색(빨강 #e2483d · 파랑 #0c66e4 · 노랑 #f5cd47)은
+   테마와 무관하게 고정 — lib/media/annotate/types.ts MARK_COLORS.
+   =========================================================================== */
+
+.wiki-media {
+  --wm-bg: var(--bg, #ffffff);
+  --wm-bg-soft: var(--bg-soft, #f7f8f9);
+  --wm-hover: var(--hover, #f1f2f4);
+  --wm-sel: var(--sel, #e9f2ff);
+  --wm-fg: var(--fg, #172b4d);
+  --wm-fg-2: var(--fg-2, #44546f);
+  --wm-fg-3: var(--fg-3, #626f86);
+  --wm-line: var(--line, #dfe1e6);
+  --wm-line-2: var(--line-2, #ebecf0);
+  --wm-accent: var(--accent, #0c66e4);
+  --wm-accent-hover: var(--accent-hover, #0055cc);
+  --wm-accent-fg: var(--accent-fg, #ffffff);
+  --wm-accent-soft: var(--accent-soft, #e9f2ff);
+  --wm-danger: var(--del, #ae2e24);
+  --wm-danger-bg: var(--del-bg, #ffeceb);
+  --wm-ok: var(--ok, #216e4e);
+  --wm-scrim: var(--scrim, rgba(9, 30, 66, 0.42));
+  --wm-elev: 0 20px 60px rgba(9, 30, 66, 0.3);
+  --wm-card-shadow: 0 2px 10px rgba(9, 30, 66, 0.1);
+  --wm-font: var(--font-pretendard, Pretendard), "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color-scheme: light;
+
+  font-family: var(--wm-font);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--wm-fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 다크 — 사용자가 직접 고름 */
+[data-theme="dark"] .wiki-media {
+  --wm-bg: var(--bg, #1d2125);
+  --wm-bg-soft: var(--bg-soft, #22272b);
+  --wm-hover: var(--hover, #2c333a);
+  --wm-sel: var(--sel, #1c2b41);
+  --wm-fg: var(--fg, #dee4ea);
+  --wm-fg-2: var(--fg-2, #b6c2cf);
+  --wm-fg-3: var(--fg-3, #8c9bab);
+  --wm-line: var(--line, #384049);
+  --wm-line-2: var(--line-2, #2c333a);
+  --wm-accent: var(--accent, #579dff);
+  --wm-accent-hover: var(--accent-hover, #85b8ff);
+  --wm-accent-fg: var(--accent-fg, #1d2125);
+  --wm-accent-soft: var(--accent-soft, #1c2b41);
+  --wm-danger: var(--del, #fd9891);
+  --wm-danger-bg: var(--del-bg, #5d1f1a);
+  --wm-ok: var(--ok, #7ee2b8);
+  --wm-scrim: var(--scrim, rgba(0, 0, 0, 0.6));
+  --wm-elev: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --wm-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+/* 다크 — 직접 고르지 않았고 기기가 다크 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wiki-media {
+    --wm-bg: var(--bg, #1d2125);
+    --wm-bg-soft: var(--bg-soft, #22272b);
+    --wm-hover: var(--hover, #2c333a);
+    --wm-sel: var(--sel, #1c2b41);
+    --wm-fg: var(--fg, #dee4ea);
+    --wm-fg-2: var(--fg-2, #b6c2cf);
+    --wm-fg-3: var(--fg-3, #8c9bab);
+    --wm-line: var(--line, #384049);
+    --wm-line-2: var(--line-2, #2c333a);
+    --wm-accent: var(--accent, #579dff);
+    --wm-accent-hover: var(--accent-hover, #85b8ff);
+    --wm-accent-fg: var(--accent-fg, #1d2125);
+    --wm-accent-soft: var(--accent-soft, #1c2b41);
+    --wm-danger: var(--del, #fd9891);
+    --wm-danger-bg: var(--del-bg, #5d1f1a);
+    --wm-ok: var(--ok, #7ee2b8);
+    --wm-scrim: var(--scrim, rgba(0, 0, 0, 0.6));
+    --wm-elev: 0 20px 60px rgba(0, 0, 0, 0.55);
+    --wm-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+.wiki-media *,
+.wiki-media *::before,
+.wiki-media *::after {
+  box-sizing: border-box;
+}
+
+.wiki-media .wm-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wiki-media .wm-ic {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* ───────────── 버튼 ───────────── */
+
+.wiki-media .wm-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--wm-line);
+  background: var(--wm-bg);
+  color: var(--wm-fg);
+  font: 600 14px/1 var(--wm-font);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wiki-media .wm-btn:hover:not(:disabled) {
+  background: var(--wm-hover);
+}
+.wiki-media .wm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wiki-media .wm-btn.wm-pri {
+  background: var(--wm-accent);
+  border-color: var(--wm-accent);
+  color: var(--wm-accent-fg);
+}
+.wiki-media .wm-btn.wm-pri:hover:not(:disabled) {
+  background: var(--wm-accent-hover);
+  border-color: var(--wm-accent-hover);
+}
+.wiki-media .wm-btn.wm-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.wiki-media .wm-btn.wm-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--wm-fg-2);
+}
+.wiki-media :focus-visible {
+  outline: 2px solid var(--wm-accent);
+  outline-offset: 2px;
+}
+
+/* ───────────── 넣기 창 (시안 B) ───────────── */
+
+.wiki-media.wm-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--wm-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.wiki-media .wm-modal {
+  width: min(720px, 100%);
+  max-height: min(680px, calc(100dvh - 32px));
+  background: var(--wm-bg);
+  border-radius: 14px;
+  box-shadow: var(--wm-elev);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiki-media.wm-dim {
+    animation: wm-fade 0.14s ease-out;
+  }
+  .wiki-media .wm-modal {
+    animation: wm-pop 0.16s ease-out;
+  }
+}
+@keyframes wm-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes wm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+.wiki-media .wm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--wm-line-2);
+  flex: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wiki-media .wm-tab {
+  padding: 8px 12px;
+  color: var(--wm-fg-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: 500 14px var(--wm-font);
+  cursor: pointer;
+  white-space: nowrap;
+  margin-bottom: -1px;
+  border-radius: 6px 6px 0 0;
+}
+.wiki-media .wm-tab:hover {
+  color: var(--wm-fg);
+}
+.wiki-media .wm-tab[aria-selected="true"] {
+  color: var(--wm-accent);
+  border-bottom-color: var(--wm-accent);
+  font-weight: 700;
+}
+.wiki-media .wm-tab:focus-visible {
+  outline-offset: -2px;
+}
+
+.wiki-media .wm-mb {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  /* 탭·범위를 바꿔도 창 높이가 덜 튀게 */
+  min-height: min(330px, 50dvh);
+}
+
+.wiki-media .wm-mf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--wm-line-2);
+  flex: none;
+}
+.wiki-media .wm-hint {
+  font-size: 12.5px;
+  color: var(--wm-fg-3);
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 찾기 + 범위 */
+.wiki-media .wm-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.wiki-media .wm-search {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--wm-line);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--wm-fg-3);
+  background: var(--wm-bg);
+}
+.wiki-media .wm-search:focus-within {
+  border-color: var(--wm-accent);
+  box-shadow: 0 0 0 1px var(--wm-accent);
+}
+.wiki-media .wm-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--wm-fg);
+  font: 400 14px var(--wm-font);
+}
+.wiki-media .wm-search input::placeholder {
+  color: var(--wm-fg-3);
+}
+.wiki-media .wm-seg {
+  display: inline-flex;
+  border: 1px solid var(--wm-line);
+  border-radius: 8px;
+  padding: 2px;
+  flex: none;
+  background: var(--wm-bg);
+}
+.wiki-media .wm-seg button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--wm-fg-2);
+  font: 500 13px var(--wm-font);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wiki-media .wm-seg button[aria-pressed="true"] {
+  background: var(--wm-sel);
+  color: var(--wm-accent);
+  font-weight: 700;
+}
+
+/* 썸네일 격자 */
+.wiki-media .wm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.wiki-media .wm-th {
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid var(--wm-line);
+  overflow: hidden;
+  background: var(--wm-bg);
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.wiki-media .wm-th:hover {
+  border-color: var(--wm-fg-3);
+}
+.wiki-media .wm-th[aria-selected="true"] {
+  outline: 2px solid var(--wm-accent);
+  outline-offset: 1px;
+  border-color: var(--wm-accent);
+}
+.wiki-media .wm-th:focus-visible {
+  outline: 2px solid var(--wm-accent);
+  outline-offset: 1px;
+}
+.wiki-media .wm-th .wm-im {
+  height: 86px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #dfe8f7, #eef2f8);
+  overflow: hidden;
+}
+[data-theme="dark"] .wiki-media .wm-th .wm-im {
+  background: linear-gradient(135deg, #2a3442, #232a33);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wiki-media .wm-th .wm-im {
+    background: linear-gradient(135deg, #2a3442, #232a33);
+  }
+}
+.wiki-media .wm-th .wm-im img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  display: block;
+}
+.wiki-media .wm-th small {
+  display: block;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--wm-fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiki-media .wm-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--wm-accent);
+  color: var(--wm-accent-fg);
+  display: grid;
+  place-items: center;
+  font: 700 11px var(--wm-font);
+  box-shadow: 0 0 0 2px var(--wm-bg);
+}
+.wiki-media .wm-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(9, 30, 66, 0.72);
+  color: #fff;
+  font: 600 10.5px var(--wm-font);
+}
+.wiki-media .wm-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
+  background: var(--wm-hover);
+  color: var(--wm-fg-2);
+  display: grid;
+  place-items: center;
+  font: 800 11px var(--wm-font);
+  letter-spacing: 0.02em;
+}
+.wiki-media .wm-badge.wm-pdf {
+  background: #ffeceb;
+  color: #c9372c;
+}
+
+.wiki-media .wm-empty {
+  padding: 40px 12px;
+  text-align: center;
+  color: var(--wm-fg-3);
+  font-size: 13.5px;
+}
+
+/* 끌어 놓기 칸 (내 컴퓨터에서) */
+.wiki-media .wm-drop {
+  border: 1.5px dashed var(--wm-line);
+  border-radius: 10px;
+  min-height: 150px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--wm-fg-2);
+  background: var(--wm-bg);
+}
+.wiki-media .wm-drop.wm-over,
+.wiki-media .wm-drop:focus-within {
+  border-color: var(--wm-accent);
+  background: var(--wm-accent-soft);
+  color: var(--wm-accent);
+}
+.wiki-media .wm-drop .wm-big {
+  font-weight: 700;
+  font-size: 15px;
+}
+.wiki-media .wm-drop small {
+  color: var(--wm-fg-3);
+  font-size: 12.5px;
+}
+.wiki-media .wm-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--wm-accent);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* 올리는 파일 줄 */
+.wiki-media .wm-queue {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wiki-media .wm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--wm-line-2);
+  border-radius: 10px;
+}
+.wiki-media .wm-row .wm-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 7px;
+  flex: none;
+  overflow: hidden;
+  background: var(--wm-hover);
+}
+.wiki-media .wm-row .wm-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wiki-media .wm-row .wm-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wiki-media .wm-row b {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiki-media .wm-row small {
+  font-size: 12px;
+  color: var(--wm-fg-3);
+}
+.wiki-media .wm-row small.wm-err {
+  color: var(--wm-danger);
+}
+.wiki-media .wm-row small.wm-done {
+  color: var(--wm-ok);
+}
+.wiki-media .wm-row .wm-acts {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.wiki-media .wm-bar {
+  height: 4px;
+  background: color-mix(in srgb, var(--wm-accent) 18%, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wiki-media .wm-bar i {
+  display: block;
+  height: 100%;
+  background: var(--wm-accent);
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wiki-media .wm-bar i {
+    transition: width 0.15s linear;
+  }
+}
+
+/* 주소로 */
+.wiki-media .wm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.wiki-media .wm-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wm-fg-2);
+}
+.wiki-media .wm-input {
+  height: 36px;
+  border: 1px solid var(--wm-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--wm-bg);
+  color: var(--wm-fg);
+  font: 400 14px var(--wm-font);
+  width: 100%;
+}
+.wiki-media .wm-input:focus {
+  outline: 0;
+  border-color: var(--wm-accent);
+  box-shadow: 0 0 0 1px var(--wm-accent);
+}
+.wiki-media .wm-preview {
+  border: 1px solid var(--wm-line);
+  border-radius: 10px;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--wm-bg-soft);
+  color: var(--wm-fg-3);
+  font-size: 13px;
+  position: relative;
+}
+.wiki-media .wm-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+}
+.wiki-media .wm-yt-play {
+  position: absolute;
+  width: 64px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ff0033;
+  display: grid;
+  place-items: center;
+}
+.wiki-media .wm-note {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--wm-fg-3);
+}
+.wiki-media .wm-note.wm-err {
+  color: var(--wm-danger);
+}
+
+@media (max-width: 560px) {
+  .wiki-media.wm-dim {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .wiki-media .wm-modal {
+    border-radius: 14px 14px 0 0;
+    max-height: calc(100dvh - 24px);
+  }
+  .wiki-media .wm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wiki-media .wm-filter {
+    flex-direction: column;
+  }
+  .wiki-media .wm-seg {
+    align-self: flex-start;
+  }
+  .wiki-media .wm-mf .wm-hint {
+    display: none;
+  }
+  .wiki-media .wm-mf {
+    justify-content: flex-end;
+  }
+}
+
+/* ───────────── 표시 달기 (시안 D) ───────────── */
+
+.wiki-media.wm-ann {
+  position: fixed;
+  inset: 0;
+  z-index: 1010;
+  background: var(--wm-bg);
+  display: flex;
+  flex-direction: column;
+}
+.wiki-media .wm-ann-top {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--wm-line-2);
+  flex: none;
+}
+.wiki-media .wm-crumb {
+  font-size: 13px;
+  color: var(--wm-fg-3);
+  margin: 0 auto 0 0;
+  font-weight: 400;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wiki-media .wm-atool {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--wm-line-2);
+  flex: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.wiki-media .wm-tool {
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--wm-fg-2);
+  font: 600 13px var(--wm-font);
+  cursor: pointer;
+  flex: none;
+  white-space: nowrap;
+}
+.wiki-media .wm-tool .wm-ic {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
+.wiki-media .wm-tool:hover:not(:disabled) {
+  background: var(--wm-hover);
+  color: var(--wm-fg);
+}
+.wiki-media .wm-tool[aria-pressed="true"] {
+  background: var(--wm-accent);
+  color: var(--wm-accent-fg);
+}
+.wiki-media .wm-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.wiki-media .wm-tool.wm-swatch {
+  padding: 0;
+  width: 34px;
+}
+.wiki-media .wm-tool.wm-swatch i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: block;
+}
+.wiki-media .wm-tool.wm-swatch[aria-pressed="true"] {
+  background: var(--wm-sel);
+}
+.wiki-media .wm-tool.wm-swatch[aria-pressed="true"] i {
+  box-shadow: 0 0 0 2px var(--wm-bg), 0 0 0 4px var(--wm-accent);
+}
+.wiki-media .wm-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--wm-line);
+  margin: 0 6px;
+  flex: none;
+}
+
+.wiki-media .wm-work {
+  flex: 1;
+  min-height: 0;
+  background: var(--wm-bg-soft);
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  padding: 24px;
+}
+.wiki-media .wm-col {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wiki-media .wm-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--wm-card-shadow);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wiki-media .wm-stage canvas {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+.wiki-media .wm-stage svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.wiki-media .wm-stage[data-tool="select"] svg {
+  cursor: default;
+}
+.wiki-media .wm-stage[data-tool="text"] svg {
+  cursor: text;
+}
+.wiki-media .wm-stage:not([data-tool="select"]):not([data-tool="text"]) svg {
+  cursor: crosshair;
+}
+.wiki-media .wm-stage .wm-hit {
+  cursor: move;
+}
+.wiki-media .wm-stage .wm-handle {
+  cursor: grab;
+}
+.wiki-media .wm-text-edit {
+  position: absolute;
+  min-width: 120px;
+  border: 2px solid var(--wm-accent);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-weight: 700;
+  background: #fff;
+  color: #172b4d;
+  outline: none;
+  transform: translateY(-50%);
+}
+
+.wiki-media .wm-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--wm-fg-2);
+}
+.wiki-media .wm-leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wiki-media .wm-leg-n {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font: 800 11px/1 var(--wm-font);
+  flex: none;
+}
+.wiki-media .wm-leg {
+  gap: 2px;
+}
+.wiki-media .wm-leg input {
+  width: 110px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--wm-fg);
+  font: 500 13.5px var(--wm-font);
+}
+@supports (field-sizing: content) {
+  .wiki-media .wm-leg input {
+    field-sizing: content;
+    width: auto;
+    min-width: 4.5em;
+    max-width: 240px;
+  }
+}
+.wiki-media .wm-leg input:hover {
+  border-color: var(--wm-line);
+}
+.wiki-media .wm-leg input:focus {
+  outline: 0;
+  border-color: var(--wm-accent);
+  background: var(--wm-bg);
+}
+.wiki-media .wm-leg input::placeholder {
+  color: var(--wm-fg-3);
+}
+.wiki-media .wm-leg-hint {
+  margin-left: auto;
+  color: var(--wm-fg-3);
+  font-size: 13px;
+  text-align: right;
+}
+.wiki-media .wm-ann-msg {
+  margin: auto;
+  color: var(--wm-fg-3);
+  text-align: center;
+}
+.wiki-media .wm-ann-msg.wm-err {
+  color: var(--wm-danger);
+}
+
+@media (max-width: 720px) {
+  .wiki-media .wm-ann-top {
+    padding: 0 12px;
+  }
+  .wiki-media .wm-atool {
+    padding: 8px 10px;
+  }
+  .wiki-media .wm-tool .wm-tl {
+    display: none;
+  }
+  .wiki-media .wm-tool.wm-keep .wm-tl {
+    display: inline;
+  }
+  .wiki-media .wm-work {
+    padding: 12px;
+  }
+  .wiki-media .wm-legend {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wiki-media .wm-leg input {
+    flex: 1;
+    width: auto;
+    border-color: var(--wm-line);
+  }
+  .wiki-media .wm-leg-hint {
+    margin-left: 0;
+    text-align: left;
+  }
+}
+
+/* 창 자체(초점 받는 바깥 틀)에는 초점 테두리를 그리지 않는다 */
+.wiki-media.wm-ann:focus,
+.wiki-media .wm-modal:focus {
+  outline: none;
+}
