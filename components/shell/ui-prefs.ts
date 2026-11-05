@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * 화면 설정(테마 · 문서 트리 서랍 · 목차 카드) 저장소.
+ * 화면 설정(테마 · 문서 트리 서랍 · 목차) 저장소.
  *
  * 실제 상태는 <html> 의 data-* 속성이다. 첫 칠하기 전에 app/layout.tsx 의
  * 인라인 스크립트(PREFS_SCRIPT)가 localStorage 를 읽어 속성을 붙이고,
@@ -11,7 +11,7 @@ import { useSyncExternalStore } from "react";
  * useSyncExternalStore 로 따라간다 → 깜빡임도, 하이드레이션 오류도 없다.
  */
 
-import { PANEL_ATTR, PANEL_KEY, THEME_KEY, type Panel } from "./prefs-script";
+import { PANEL_ATTR, PANEL_KEY, THEME_KEY, TOC_ROOM_ATTR, type Panel } from "./prefs-script";
 
 export type { Panel };
 export type Theme = "light" | "dark";
@@ -59,6 +59,44 @@ export function usePanelOpen(panel: Panel): boolean {
     () => isPanelOpen(panel),
     () => false
   );
+}
+
+/* ───────────── 목차 칸 자리 · 작은 창 ─────────────
+ * 넓으면 목차는 본문 옆 칸(열고 닫기는 data-toc 로 저장),
+ * 자리가 모자라면 [목차] 버튼을 누를 때만 작은 창(data-toc-pop, 저장 안 함). */
+
+const TOC_POP_ATTR = "data-toc-pop";
+
+export function hasTocRoom(): boolean {
+  return document.documentElement.getAttribute(TOC_ROOM_ATTR) === "1";
+}
+
+export function setTocRoom(room: boolean) {
+  const root = document.documentElement;
+  const v = room ? "1" : "0";
+  if (root.getAttribute(TOC_ROOM_ATTR) === v) return;
+  root.setAttribute(TOC_ROOM_ATTR, v);
+  if (room) root.removeAttribute(TOC_POP_ATTR); // 칸이 생기면 작은 창은 닫는다
+  emit();
+}
+
+export function useTocRoom(): boolean {
+  return useSyncExternalStore(subscribe, hasTocRoom, () => false);
+}
+
+export function isTocPopOpen(): boolean {
+  return document.documentElement.getAttribute(TOC_POP_ATTR) === "open";
+}
+
+export function setTocPop(open: boolean) {
+  const root = document.documentElement;
+  if (open) root.setAttribute(TOC_POP_ATTR, "open");
+  else root.removeAttribute(TOC_POP_ATTR);
+  emit();
+}
+
+export function useTocPop(): boolean {
+  return useSyncExternalStore(subscribe, isTocPopOpen, () => false);
 }
 
 /* ───────────── 테마 ───────────── */

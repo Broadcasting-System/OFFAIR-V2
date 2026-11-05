@@ -304,28 +304,43 @@
     backdrop-filter: blur(8px);
   }
 
-  /* 본문 칼럼: 가운데 700px. 목차 카드가 열려 있고 자리가 되면 오른쪽에 자리를 비운다. */
+  /* 본문 칼럼: 가운데 780px. 목차 칸이 보이면 본문 + 목차를 한 묶음으로 가운데 둔다 (아래). */
   .page-grid {
     display: grid;
-    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(32px, 1fr);
+    grid-template-columns: minmax(32px, 1fr) minmax(0, 780px) minmax(32px, 1fr);
   }
   .page-grid > * {
     grid-column: 2;
     min-width: 0;
   }
 
-  /* 떠 있는 목차 카드 */
-  .toc-card {
+  /* 본문 옆 목차 칸 (시안 f9-A): 테두리 없는 목록, 제목 높이에서 시작해 스크롤을 따라온다 */
+  .page-grid > .toc-side {
+    display: none;
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .toc-side-in {
+    position: sticky;
+    top: 76px;
+    margin-top: 72px; /* 처음엔 제목 높이에서 시작 */
+    max-height: calc(100dvh - 100px);
+    overflow-y: auto;
+    padding-bottom: 24px;
+  }
+
+  /* 자리가 모자랄 때 [목차] 버튼 아래 작은 창 */
+  .toc-pop {
     position: fixed;
-    top: 64px;
-    right: 22px;
+    top: 56px;
+    right: var(--toc-pop-right, 22px);
     z-index: 25;
-    width: 230px;
-    max-height: calc(100dvh - 88px);
+    width: 250px;
+    max-height: calc(100dvh - 80px);
     overflow-y: auto;
     display: none;
   }
-  html[data-toc="open"] .toc-card {
+  html[data-toc-pop="open"] .toc-pop {
     display: block;
   }
   .toc-sheet {
@@ -360,17 +375,13 @@
   }
 }
 
-/* 서랍이 닫혀 있으면 main 이 넓다 → 1024px 부터 목차 자리를 비울 수 있다 */
-@media (min-width: 1024px) {
-  html[data-toc="open"]:not([data-drawer="open"]) .page-grid {
-    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(270px, 1fr);
-  }
+/* 목차 칸: 열려 있고 본문 영역에 자리가 있으면(data-toc-room, components/toc.tsx 가 main 폭으로 정함)
+   본문 780 + 사이 56 + 목차 200 을 한 묶음으로 가운데. 기록 패널·여백 댓글이 열리면 그쪽이 오른쪽을 쓴다. */
+html[data-toc="open"][data-toc-room="1"]:not([data-history="open"]):not([data-cmt-margin="on"]) .page-grid.has-toc {
+  grid-template-columns: minmax(32px, 1fr) minmax(0, 780px) 56px 200px minmax(32px, 1fr);
 }
-/* 서랍이 열려 있으면 1280px 부터 */
-@media (min-width: 1280px) {
-  html[data-toc="open"] .page-grid {
-    grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(270px, 1fr);
-  }
+html[data-toc="open"][data-toc-room="1"]:not([data-history="open"]):not([data-cmt-margin="on"]) .page-grid > .toc-side {
+  display: block;
 }
 
 /* ============================== 모바일 (≤768px) ============================ */
@@ -445,9 +456,10 @@
   }
 
   /* 목차는 아래에서 올라오는 시트 */
-  .toc-card,
-  html[data-toc="open"] .toc-card {
-    display: none;
+  .toc-pop,
+  html[data-toc-pop="open"] .toc-pop,
+  .page-grid > .toc-side {
+    display: none !important;
   }
   .toc-sheet {
     display: block;
@@ -766,12 +778,9 @@ html[data-history="open"] .history-panel {
 .history-scrim {
   display: none;
 }
-/* 기록을 열면 목차 카드는 숨기고 본문 오른쪽 자리도 비우지 않는다 */
-html[data-history="open"] .toc-card {
+/* 기록을 열면 목차(칸·작은 창)는 숨긴다 — 오른쪽은 기록 패널 자리 */
+html[data-history="open"] .toc-pop {
   display: none;
-}
-html[data-history="open"] .page-grid {
-  grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(32px, 1fr);
 }
 .history-banner {
   background: var(--warn-bg);
@@ -907,11 +916,11 @@ html[data-history="open"] .page-grid {
 .cmt-box-on {
   background: var(--cmt-hl-on);
 }
-/* 여백 카드가 열리면 본문 오른쪽 자리를 넓히고 목차 카드는 숨긴다 */
+/* 여백 카드가 열리면 본문 오른쪽 자리를 넓히고 목차(칸·작은 창)는 숨긴다 */
 html[data-cmt-margin="on"] .page-grid {
-  grid-template-columns: minmax(24px, 1fr) minmax(0, 700px) minmax(320px, 1fr);
+  grid-template-columns: minmax(24px, 1fr) minmax(0, 780px) minmax(320px, 1fr);
 }
-html[data-cmt-margin="on"] .toc-card {
+html[data-cmt-margin="on"] .toc-pop {
   display: none;
 }
 /* 좁은 화면: 아래 시트 */

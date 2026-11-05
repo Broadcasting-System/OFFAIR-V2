@@ -55,7 +55,7 @@ export function Figure({
       width={width}
       height={height}
       className="h-auto w-full"
-      sizes="(max-width: 768px) 100vw, 700px"
+      sizes="(max-width: 768px) 100vw, 780px"
     />
   );
 

@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { ListIcon, PencilIcon } from "./icons";
-import { isMobileViewport, togglePanel, usePanelOpen } from "./ui-prefs";
+import {
+  isMobileViewport,
+  isTocPopOpen,
+  hasTocRoom,
+  setTocPop,
+  togglePanel,
+  usePanelOpen,
+  useTocPop,
+  useTocRoom,
+} from "./ui-prefs";
 import { TocSheet } from "@/components/toc";
 import type { TocItem } from "@/lib/content";
 
@@ -36,9 +45,22 @@ export function PageBar({
   const [sheetOpen, setSheetOpen] = useState(false);
   const hasToc = !!toc && toc.length > 0;
 
-  function onTocClick() {
+  const tocRoom = useTocRoom();
+  const tocPop = useTocPop();
+  // 자리가 되면 본문 옆 칸을 열고 닫고(저장), 모자라면 버튼 아래 작은 창
+  const tocShown = tocRoom ? tocOpen : tocPop;
+
+  function onTocClick(e: React.MouseEvent<HTMLButtonElement>) {
     if (isMobileViewport()) setSheetOpen((v) => !v);
-    else togglePanel("toc");
+    else if (hasTocRoom()) togglePanel("toc");
+    else {
+      const r = e.currentTarget.getBoundingClientRect();
+      document.documentElement.style.setProperty(
+        "--toc-pop-right",
+        `${Math.max(12, document.documentElement.clientWidth - r.right)}px`
+      );
+      setTocPop(!isTocPopOpen());
+    }
   }
 
   return (
@@ -73,10 +95,11 @@ export function PageBar({
           <button
             type="button"
             onClick={onTocClick}
-            aria-expanded={tocOpen || sheetOpen}
-            aria-controls="page-toc"
+            data-toc-button
+            aria-expanded={tocShown || sheetOpen}
+            aria-controls={tocRoom ? "page-toc-side" : "page-toc"}
             className={`inline-flex h-8 flex-none items-center gap-1.5 rounded-md px-3 text-sm font-medium text-fg-2 transition-colors hover:bg-hover ${
-              tocOpen ? "min-[769px]:bg-hover min-[769px]:text-fg" : ""
+              tocShown ? "min-[769px]:bg-hover min-[769px]:text-fg" : ""
             }`}
           >
             <ListIcon size={16} className="min-[769px]:hidden" />

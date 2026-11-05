@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TocItem } from "@/lib/content";
 import { CloseIcon } from "@/components/shell/icons";
+import { TOC_ROOM_MIN } from "@/components/shell/prefs-script";
+import { isTocPopOpen, setTocPop, setTocRoom } from "@/components/shell/ui-prefs";
 
 /**
  * 스크롤 위치에 맞춰 지금 읽는 제목을 찾는다.
@@ -85,20 +87,73 @@ function TocList({
   );
 }
 
-/** 데스크톱: 오른쪽 위에 떠 있는 목차 카드 (열림 여부는 html[data-toc]). */
-export function TocCard({ items }: { items: TocItem[] }) {
+/**
+ * 데스크톱(자리가 될 때): 본문 옆 칸의 목차. 본문과 한 묶음으로 가운데 정렬되고,
+ * 제목 높이에서 시작해 스크롤을 따라온다. 보이기는 CSS(html[data-toc][data-toc-room]).
+ * 본문 영역(main) 폭을 지켜보다가 자리가 되는지 data-toc-room 에 적는다.
+ */
+export function TocSide({ items }: { items: TocItem[] }) {
   const active = useActiveHeading(items);
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const main = ref.current?.parentElement;
+    if (!main) return;
+    const check = () =>
+      setTocRoom(window.innerWidth > 768 && main.clientWidth >= TOC_ROOM_MIN);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(main);
+    return () => ro.disconnect();
+  }, []);
+
+  if (items.length === 0) return null;
+  return (
+    <aside ref={ref} id="page-toc-side" className="toc-side" aria-label="이 페이지의 목차">
+      <nav className="toc-side-in">
+        <p className="mb-2 text-[12px] font-semibold tracking-[0.02em] text-fg-3">이 페이지</p>
+        <TocList items={items} active={active} />
+      </nav>
+    </aside>
+  );
+}
+
+/** 데스크톱(자리가 모자랄 때): [목차] 버튼 아래 작은 창. 바깥을 누르거나 Esc 면 닫힌다. */
+export function TocPop({ items }: { items: TocItem[] }) {
+  const active = useActiveHeading(items);
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    function onDown(e: PointerEvent) {
+      if (!isTocPopOpen()) return;
+      const t = e.target as Element | null;
+      if (ref.current?.contains(t) || t?.closest("[data-toc-button]")) return;
+      setTocPop(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && isTocPopOpen()) setTocPop(false);
+    }
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+      setTocPop(false); // 다른 문서로 옮기면 닫는다
+    };
+  }, []);
+
   if (items.length === 0) return null;
   return (
     <nav
+      ref={ref}
       id="page-toc"
       aria-label="이 페이지의 목차"
-      className="toc-card rounded-xl border border-line bg-bg px-3.5 py-3 shadow-pop"
+      className="toc-pop rounded-xl border border-line bg-bg px-3.5 py-3 shadow-pop"
     >
       <p className="mb-1.5 text-[11px] font-semibold tracking-[0.06em] text-fg-3">
         이 페이지
       </p>
-      <TocList items={items} active={active} />
+      <TocList items={items} active={active} onPick={() => setTocPop(false)} />
     </nav>
   );
 }

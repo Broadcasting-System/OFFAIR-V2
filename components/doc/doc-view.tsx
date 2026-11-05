@@ -5,7 +5,7 @@ import { formatDate, getDocInfo, readingMinutes } from "@/lib/doc-info";
 import { SPACE_LABEL } from "@/lib/wiki/links";
 import { MembersBand } from "@/components/members/band";
 import { PageBar } from "@/components/shell/page-bar";
-import { TocCard } from "@/components/toc";
+import { TocPop, TocSide } from "@/components/toc";
 import { SiteFooter } from "@/components/site-footer";
 import { EditLink } from "./edit-link";
 import { CommentsProvider } from "@/components/comments/context";
@@ -21,8 +21,9 @@ import {
 
 /**
  * 문서 한 장의 화면 (레이아웃 D).
- * 위 막대(빵부스러기 · 목차 · 기록 · 편집) → 700px 본문(카테고리 칩 · 제목 · 설명 · 메타 ·
- * 본문 · 이전/다음) + 오른쪽 위 떠 있는 목차 카드. 기록을 열면 오른쪽에 수정 기록 패널이
+ * 위 막대(빵부스러기 · 목차 · 기록 · 편집) → 780px 본문(카테고리 칩 · 제목 · 설명 · 메타 ·
+ * 본문 · 이전/다음) + 본문 옆 목차 칸(시안 f9-A, 한 묶음으로 가운데). 자리가 모자라면 목차는
+ * [목차] 버튼의 작은 창. 기록을 열면 오른쪽에 수정 기록 패널이
  * 붙고, 버전을 고르면 본문 자리에 바뀐 곳을 표시한 비교 화면이 나온다.
  */
 export async function DocView({
@@ -64,7 +65,7 @@ export async function DocView({
             <main
               id="main"
               tabIndex={-1}
-              className="page-grid flex-1 outline-none"
+              className={`page-grid flex-1 outline-none ${doc.toc.length > 0 ? "has-toc" : ""}`}
             >
               <HistorySwap>
                 <article className="pt-[18px] pb-20">
@@ -114,13 +115,14 @@ export async function DocView({
                   <PrevNext prev={prev} next={next} />
                 </article>
               </HistorySwap>
+              <TocSide items={doc.toc} />
             </main>
             <SiteFooter />
           </div>
           <HistoryPanel />
         </div>
 
-        <TocCard items={doc.toc} />
+        <TocPop items={doc.toc} />
         <RecordVisit
           space={space}
           url={doc.url}
