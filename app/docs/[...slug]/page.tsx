@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MDX } from "@/lib/mdx";
 import { getAdjacent, getAllSlugs, getDoc } from "@/lib/content";
-import { IS_DEV } from "@/lib/dev";
 import { DocView } from "@/components/doc/doc-view";
 
 interface PageProps {
@@ -33,12 +32,7 @@ export default async function DocPage({ params }: PageProps) {
   const { prev, next } = getAdjacent(slug);
 
   return (
-    <DocView
-      doc={doc}
-      prev={prev}
-      next={next}
-      editHref={IS_DEV ? `/edit/docs/${slug.join("/")}` : undefined}
-    >
+    <DocView doc={doc} prev={prev} next={next}>
       <MDX source={doc.body} />
     </DocView>
   );

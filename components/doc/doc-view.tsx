@@ -4,6 +4,7 @@ import { formatDate, getDocFileInfo, readingMinutes } from "@/lib/doc-info";
 import { PageBar } from "@/components/shell/page-bar";
 import { TocCard } from "@/components/toc";
 import { SiteFooter } from "@/components/site-footer";
+import { EditLink } from "./edit-link";
 
 /**
  * 문서 한 장의 화면 (레이아웃 D).
@@ -14,13 +15,11 @@ export function DocView({
   doc,
   prev,
   next,
-  editHref,
   children,
 }: {
   doc: Doc;
   prev: DocMeta | null;
   next: DocMeta | null;
-  editHref?: string;
   children: React.ReactNode;
 }) {
   const info = getDocFileInfo(doc.slug);
@@ -31,8 +30,7 @@ export function DocView({
       <PageBar
         crumbs={[{ label: "가이드북", href: "/" }, { label: doc.category }]}
         toc={doc.toc}
-        showEdit
-        editHref={editHref}
+        actions={<EditLink space="guide" slug={doc.slug} />}
       />
 
       <main id="main" tabIndex={-1} className="page-grid flex-1 outline-none">

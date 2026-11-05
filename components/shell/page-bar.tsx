@@ -23,11 +23,14 @@ export function PageBar({
   toc,
   showEdit = false,
   editHref,
+  actions,
 }: {
   crumbs: Crumb[];
   toc?: TocItem[];
   showEdit?: boolean;
   editHref?: string;
+  /** 목차 버튼 오른쪽에 붙는 버튼들 (기록·편집 등) */
+  actions?: React.ReactNode;
 }) {
   const tocOpen = usePanelOpen("toc");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -80,6 +83,8 @@ export function PageBar({
             목차
           </button>
         )}
+
+        {actions}
 
         {showEdit &&
           (editHref ? (

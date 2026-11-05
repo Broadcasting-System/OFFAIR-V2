@@ -97,3 +97,114 @@ export const DocIcon = (p: IconProps) => (
     <path d="M14 3v5h5" />
   </Svg>
 );
+export const PlusIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+);
+export const MoreIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="6" cy="12" r="1.1" fill="currentColor" />
+    <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+    <circle cx="18" cy="12" r="1.1" fill="currentColor" />
+  </Svg>
+);
+export const GripIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="9" cy="6" r="1" fill="currentColor" />
+    <circle cx="15" cy="6" r="1" fill="currentColor" />
+    <circle cx="9" cy="12" r="1" fill="currentColor" />
+    <circle cx="15" cy="12" r="1" fill="currentColor" />
+    <circle cx="9" cy="18" r="1" fill="currentColor" />
+    <circle cx="15" cy="18" r="1" fill="currentColor" />
+  </Svg>
+);
+export const TrashIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </Svg>
+);
+export const LinkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
+    <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+  </Svg>
+);
+export const CopyIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+  </Svg>
+);
+export const MoveIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 12h12M12 8l4 4-4 4M20 5v14" />
+  </Svg>
+);
+export const HistoryIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5" />
+    <path d="M4 4v4.5h4.5M12 8v4l3 2" />
+  </Svg>
+);
+export const RestoreIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+  </Svg>
+);
+export const ContrastIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
+  </Svg>
+);
+export const EnterIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M19 6v5a3 3 0 0 1-3 3H6" />
+    <path d="m10 10-4 4 4 4" />
+  </Svg>
+);
+export const FolderIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+  </Svg>
+);
+export const CommentIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
+  </Svg>
+);
+export const CheckIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Svg>
+);
+export const ThumbUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 10v10H4V10z" />
+    <path d="M7 10l4-6a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" />
+  </Svg>
+);
+export const SendIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 12 19 5l-4 14-3-6z" />
+    <path d="m12 13 7-8" />
+  </Svg>
+);
+export const AtIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8" />
+  </Svg>
+);
+export const ArrowUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Svg>
+);
+export const ArrowDownIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Svg>
+);
