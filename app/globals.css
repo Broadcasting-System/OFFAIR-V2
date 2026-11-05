@@ -709,3 +709,152 @@
     max-height: none;
   }
 }
+
+/* ======================== 수정 기록 · 비교 (f6-A) ======================== */
+:root {
+  --add-line: #4bce97;
+  --del-line: #f87168;
+}
+:root[data-theme="dark"] {
+  --add-line: #2abb7f;
+  --del-line: #f15b50;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --add-line: #2abb7f;
+    --del-line: #f15b50;
+  }
+}
+
+.doc-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.doc-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.history-panel {
+  display: none;
+  position: sticky;
+  top: 52px;
+  width: 320px;
+  flex: none;
+  height: calc(100dvh - 52px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 12px 24px;
+  border-left: 1px solid var(--line-2);
+  background: var(--bg);
+}
+html[data-history="open"] .history-panel {
+  display: block;
+}
+.history-scrim {
+  display: none;
+}
+/* 기록을 열면 목차 카드는 숨기고 본문 오른쪽 자리도 비우지 않는다 */
+html[data-history="open"] .toc-card {
+  display: none;
+}
+html[data-history="open"] .page-grid {
+  grid-template-columns: minmax(32px, 1fr) minmax(0, 700px) minmax(32px, 1fr);
+}
+.history-banner {
+  background: var(--warn-bg);
+}
+
+.diff-inline ins,
+.diff-prose ins {
+  background: var(--ok-bg);
+  color: var(--ok);
+  text-decoration: none;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.diff-inline del,
+.diff-prose del {
+  background: var(--del-bg);
+  color: var(--del);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.diff-prose .diff-chunk > * + * {
+  margin-top: 0.85em;
+}
+.diff-prose .diff-blk {
+  border-left: 3px solid;
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.diff-prose .diff-blk > :first-child {
+  margin-top: 0;
+}
+.diff-prose .diff-blk-add {
+  border-color: var(--add-line);
+  background: var(--ok-bg);
+}
+.diff-prose .diff-blk-del {
+  border-color: var(--del-line);
+  background: var(--del-bg);
+  color: var(--fg-2);
+  text-decoration: line-through;
+}
+.diff-prose .diff-blk-del * {
+  text-decoration: inherit;
+}
+.diff-plain {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  /* 모바일: 아래에서 올라오는 시트 */
+  .history-panel,
+  html[data-history="open"] .history-panel {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 70;
+    width: auto;
+    height: auto;
+    max-height: 70dvh;
+    border-left: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 0.22s ease,
+      visibility 0s linear 0.22s;
+  }
+  html[data-history="open"] .history-panel {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s ease;
+  }
+  .history-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  html[data-history="open"] .history-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

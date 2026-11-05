@@ -29,3 +29,20 @@ export async function MDX({ source }: { source: string }) {
 
   return <Content components={mdxComponents} />;
 }
+
+/**
+ * MDX 조각을 그려 본다. 컴파일에 실패하면 null (수정 기록 비교처럼 예전 버전·잘린 조각을
+ * 그릴 때 화면 전체가 깨지지 않게).
+ */
+export async function renderMdx(source: string): Promise<React.ReactNode | null> {
+  try {
+    const { default: Content } = await evaluate(source, {
+      ...runtime,
+      remarkPlugins: [remarkGfm],
+      rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
+    });
+    return <Content components={mdxComponents} />;
+  } catch {
+    return null;
+  }
+}
