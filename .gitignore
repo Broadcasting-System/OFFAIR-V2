@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 개발용 미디어 어댑터가 올린 파일 (app/dev/media/api)
+/public/uploads/dev/
