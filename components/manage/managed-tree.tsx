@@ -92,8 +92,8 @@ function useNav(): Nav {
   );
 }
 
-/** 서랍 머리의 "＋ 새 문서" — 지금 보는 문서의 카테고리(없으면 첫 카테고리) 맨 끝에 */
-export function NewDocButton({ compact = false }: { compact?: boolean }) {
+/** 서랍 머리의 "＋ 새 문서" 글자 단추 — 지금 보는 문서의 카테고리(없으면 첫 카테고리) 맨 끝에 */
+export function NewDocButton() {
   const me = useMe();
   const nav = useNav();
   const pathname = usePathname();
@@ -111,16 +111,11 @@ export function NewDocButton({ compact = false }: { compact?: boolean }) {
       type="button"
       onClick={onClick}
       disabled={busy}
-      aria-label="새 문서"
       title="새 문서  N"
-      className={
-        compact
-          ? "grid size-[42px] flex-none place-items-center rounded-lg border border-line bg-bg text-fg-2 transition-colors hover:bg-hover hover:text-fg disabled:opacity-60"
-          : "inline-flex h-7 flex-none items-center gap-1 rounded-md border border-line bg-bg px-2.5 text-[12.5px] font-medium text-fg-2 transition-colors hover:bg-hover hover:text-fg disabled:opacity-60"
-      }
+      className="inline-flex h-7 flex-none items-center gap-1 rounded-md px-2 text-[12.5px] font-semibold text-accent transition-colors hover:bg-accent-soft disabled:opacity-60"
     >
-      <PlusIcon size={compact ? 17 : 14} />
-      {!compact && "새 문서"}
+      <PlusIcon size={14} />
+      새 문서
     </button>
   );
 }

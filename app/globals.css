@@ -1008,7 +1008,23 @@ html[data-cmt-margin="on"] .toc-pop {
   box-shadow: 0 10px 30px rgba(9, 30, 66, 0.08);
 }
 
-/* 떠 있는 작은 메뉴 (공간 스위처 · 내 메뉴) */
+/* 서랍 맨 위 공간 탭의 고른 칸 — 라이트는 흰 칸이 떠 있게, 다크는 한 단 밝은 칸 */
+.seg-on {
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.16), 0 0 0 1px var(--line-2);
+}
+:root[data-theme="dark"] .seg-on {
+  background: var(--hover);
+  box-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .seg-on {
+    background: var(--hover);
+    box-shadow: none;
+  }
+}
+
+/* 떠 있는 작은 메뉴 (내 메뉴) */
 .pop-menu {
   border: 1px solid var(--line);
   border-radius: 12px;

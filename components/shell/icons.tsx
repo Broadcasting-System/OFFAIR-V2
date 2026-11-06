@@ -48,6 +48,12 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
   </Svg>
 );
+export const BookIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 6.5C10 5 7 4.6 3.5 5v13c3.5-.4 6.5 0 8.5 1.5 2-1.5 5-1.9 8.5-1.5V5C17 4.6 14 5 12 6.5z" />
+    <path d="M12 6.5v13" />
+  </Svg>
+);
 export const MoonIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" />
@@ -237,11 +243,6 @@ export const LoginIcon = (p: IconProps) => (
   </Svg>
 );
 /** 공간 바꾸기 */
-export const SwapIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M7 8h12l-3-3M17 16H5l3 3" />
-  </Svg>
-);
 /** 기기 따라가기(테마) */
 export const MonitorIcon = (p: IconProps) => (
   <Svg {...p}>

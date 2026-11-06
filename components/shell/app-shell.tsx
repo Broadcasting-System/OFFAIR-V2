@@ -11,7 +11,7 @@ import { treeSpace, useTree } from "@/components/manage/tree-ops";
 import { Toaster } from "@/components/ui/toast";
 import { canEditNow, useMe } from "@/lib/wiki/client";
 import { loginHref, type SpaceKey } from "@/lib/wiki/links";
-import { SpaceSwitcher } from "./space-switcher";
+import { SpaceSwitcher, spaceSub } from "./space-switcher";
 import { UserMenu } from "./user-menu";
 import {
   ClockIcon,
@@ -193,17 +193,22 @@ export function AppShell({
           aria-label="문서 트리"
         >
           <div className="px-2.5 pt-3.5 pb-6">
-            <div className="flex items-center gap-1.5 px-1 pt-0.5 pb-2.5">
-              <SpaceSwitcher space={space} count={docCount} />
-              {canSeeSpace && <NewDocButton compact />}
-              <button
-                type="button"
-                onClick={() => setSheetOpen(false)}
-                aria-label="문서 트리 닫기"
-                className="-mr-1 grid size-8 place-items-center rounded-md text-fg-2 hover:bg-hover min-[769px]:hidden"
-              >
-                <CloseIcon />
-              </button>
+            <div className="px-1 pt-0.5 pb-1">
+              <div className="flex items-center gap-1.5">
+                <SpaceSwitcher space={space} />
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen(false)}
+                  aria-label="문서 트리 닫기"
+                  className="-mr-1 grid size-8 flex-none place-items-center rounded-md text-fg-2 hover:bg-hover min-[769px]:hidden"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className="flex h-9 items-center pr-0.5 pl-1.5">
+                <span className="min-w-0 flex-1 truncate text-[12px] text-fg-3">{spaceSub(space, docCount)}</span>
+                {canSeeSpace && <NewDocButton />}
+              </div>
             </div>
             {canSeeSpace ? (
               <ManagedTree nav={nav} space={space} onNavigate={() => setSheetOpen(false)} />
