@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { NavGroup, SearchDoc } from "@/lib/content";
-import { Logo, LogoMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
+import { OffairMark } from "@/components/offair-mark";
 import { CommandPalette } from "@/components/search/command-palette";
 import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
 import { treeSpace, useTree } from "@/components/manage/tree-ops";
@@ -120,7 +121,7 @@ export function AppShell({
               data-tip="홈"
               className="rail-tip mb-2 grid size-[38px] place-items-center rounded-[10px]"
             >
-              <LogoMark />
+              <OffairMark size={36} />
             </Link>
             <RailButton
               label={drawerOpen ? "문서 트리 닫기" : "문서 트리 열기"}
