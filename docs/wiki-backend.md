@@ -213,6 +213,11 @@ curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text
 5. 공개 문서 페이지는 정적 생성(ISR)이다. 저장 API 가 `revalidatePath('/', 'layout')` 를 불러 다음 방문 때 새로 그린다. 바깥에서 파일이 바뀐 경우(git pull 등)에 대비해 루트 레이아웃에 `revalidate = 300` 도 걸어 두었다.
 6. 백업: 공개 공간은 GitHub 이 곧 백업이다. **부원 공간과 댓글은 데이터 폴더에만 있으므로** 데이터 폴더 전체를 주기적으로 다른 디스크에 복사해야 한다(부원 저장소는 `git bundle create` 로 한 파일로 만들 수도 있다).
 
+## 서버 PC 설치 스크립트 (`scripts/windows/`)
+
+- `OFFAIR 설치.cmd` — 온에어 폴더 아래 `OFFAIR-V2` 에 main 을 받고 `npm ci` → `npm run build`, 작업 스케줄러 `OFFAIR Autostart`(로그온 40초 뒤) 등록 후 위키를 켠다. Access 앱 AUD 를 넣으면 종·실시간 마이크·녹음이 없을 때 터널 설정(`onair-cloudflared\config.yml`)에 `offair.bssmcast.com → 127.0.0.1:3020` 을 넣어 터널만 다시 켜고, ONAIR `.env` 의 `CF_ACCESS_AUD` 에 AUD 를 덧붙여 ONAIR 서버(8000)만 다시 켠다. 바꾼 파일은 `.bak-offair` 사본이 남고 기록은 `온에어\offair-install-log.txt`. 새 main 으로 바꿀 때도 다시 실행하면 된다(AUD 는 엔터로 건너뜀).
+- `OFFAIR 시작.cmd` — `next start --hostname 127.0.0.1 --port 3020` 을 최소화 창으로 띄우고 꺼지면 5초 뒤 다시 켠다. 기본 환경 변수는 `ONAIR_API_BASE=http://127.0.0.1:8000`, `OFFAIR_PUBLIC_URL=https://offair.bssmcast.com`, `OFFAIR_ALLOWED_ORIGINS=offair.bssmcast.com`, `OFFAIR_DATA_DIR=온에어\offair-data`, `OFFAIR_GIT_PUSH=0`. 바꾸려면 `온에어\offair.env` 에 `KEY=VALUE` 줄을 넣는다(push 자격 증명을 넣은 뒤 `OFFAIR_GIT_PUSH=1` 등).
+
 ## 서버 PC 에 배포할 때 해야 할 일 (이 작업에서는 아무것도 설정하지 않았다)
 
 1. **Cloudflare Access 앱**: 위 "로그인 벽과 Cloudflare Access" 대로 `/login` 경로를 덮는 self-hosted 앱을 만들고 부원 이메일 정책을 건다. 공개 문서·API 는 Access 밖에 둔다. 쿠키(`CF_Authorization`)가 `Path=/` 로 가는지 꼭 확인한다.
