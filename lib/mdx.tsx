@@ -1,7 +1,7 @@
 import "server-only";
 import { evaluate } from "@mdx-js/mdx";
 import * as runtime from "react/jsx-runtime";
-import remarkGfm from "remark-gfm";
+import { remarkGfmPlugin } from "@/lib/gfm";
 import rehypeSlug from "rehype-slug";
 import rehypePrettyCode, {
   type Options as PrettyCodeOptions,
@@ -9,7 +9,8 @@ import rehypePrettyCode, {
 import { mdxComponents } from "@/components/mdx/mdx-components";
 
 const prettyCodeOptions: PrettyCodeOptions = {
-  theme: "github-dark-default",
+  // 라이트/다크 두 테마를 함께 내보낸다 (색은 globals.css 에서 --shiki-light/dark 로 고름)
+  theme: { light: "github-light", dark: "github-dark-default" },
   keepBackground: false,
   defaultLang: "plaintext",
 };
@@ -22,9 +23,26 @@ const prettyCodeOptions: PrettyCodeOptions = {
 export async function MDX({ source }: { source: string }) {
   const { default: Content } = await evaluate(source, {
     ...runtime,
-    remarkPlugins: [remarkGfm],
+    remarkPlugins: [remarkGfmPlugin],
     rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
   });
 
   return <Content components={mdxComponents} />;
+}
+
+/**
+ * MDX 조각을 그려 본다. 컴파일에 실패하면 null (수정 기록 비교처럼 예전 버전·잘린 조각을
+ * 그릴 때 화면 전체가 깨지지 않게).
+ */
+export async function renderMdx(source: string): Promise<React.ReactNode | null> {
+  try {
+    const { default: Content } = await evaluate(source, {
+      ...runtime,
+      remarkPlugins: [remarkGfmPlugin],
+      rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
+    });
+    return <Content components={mdxComponents} />;
+  } catch {
+    return null;
+  }
 }

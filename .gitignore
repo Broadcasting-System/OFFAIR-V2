@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OFFAIR 위키 데이터 (부원 공간·댓글·업로드 기록) — 공개 저장소에 절대 올리지 않는다
+/.offair-data
+
+# 개발용 업로드 어댑터가 올린 파일 (편집기 /write · 미디어 데모)
+/public/uploads/dev/

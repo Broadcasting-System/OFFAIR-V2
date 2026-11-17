@@ -1,11 +1,10 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import matter from "gray-matter";
-import GithubSlugger from "github-slugger";
+import { getStore } from "@/lib/store";
+import type { DocFull, Space } from "@/lib/store/space";
+import { extractToc as extractTocImpl, type TocItem as StoreTocItem } from "@/lib/store/markdown";
 
 /**
- * File-based MDX content layer.
+ * File-based MDX content layer — 공개(guide) 공간 저장소(lib/store)를 읽는다.
  *
  * Drop a `.mdx` file anywhere under `content/docs/` and it becomes a page.
  * Frontmatter controls how it appears in the sidebar:
@@ -18,9 +17,15 @@ import GithubSlugger from "github-slugger";
  *   ---
  *
  * Nested folders work too: content/docs/audio/mixer.mdx → /docs/audio/mixer
+ *
+ * 저장소는 파일 mtime·크기로 캐시하므로 위키 API 로 저장하거나 파일을 직접 고쳐도
+ * 다음 렌더에서 바로 반영된다 (페이지 캐시는 저장 API 가 revalidatePath 로 비운다).
+ *
+ * 함수마다 공간을 고를 수 있다 (기본 guide). 부원 공간(members)은 권한을 확인한 동적 페이지
+ * (app/members/**)에서만 부른다 — 정적 생성·루트 레이아웃에서는 부르지 않는다.
  */
 
-const CONTENT_ROOT = path.join(process.cwd(), "content", "docs");
+export type ContentSpace = "guide" | "members";
 
 export interface DocMeta {
   slug: string[];
@@ -32,15 +37,13 @@ export interface DocMeta {
 }
 
 export interface Doc extends DocMeta {
+  /** 공간 루트 기준 파일 경로 (git 이력용) */
+  path: string;
   body: string;
   toc: TocItem[];
 }
 
-export interface TocItem {
-  id: string;
-  text: string;
-  level: 2 | 3;
-}
+export type TocItem = StoreTocItem;
 
 export interface NavGroup {
   category: string;
@@ -48,147 +51,105 @@ export interface NavGroup {
   items: DocMeta[];
 }
 
-const DEFAULT_CATEGORY_ORDER = [
-  "시작하기",
-  "장비",
-  "송출",
-  "음향",
-  "조명·영상",
-  "운영",
-];
+function guide() {
+  return getStore().guide;
+}
 
-const SIDEBAR_CONFIG = path.join(process.cwd(), "content", "sidebar.json");
+/** 공간. 부원 공간을 쓸 수 없으면(데이터 폴더 위치 문제) null */
+export function spaceOf(id: ContentSpace = "guide"): Space | null {
+  const store = getStore();
+  return id === "guide" ? store.guide : store.members;
+}
 
 /**
- * Ordered list of sidebar categories, managed from the edit UI via
- * `content/sidebar.json`. Falls back to a sensible default.
+ * 페이지 params 의 catch-all 조각은 %xx 로 인코딩된 채 올 수 있다 (한글 경로).
+ * 한 번 풀어서 파일 경로와 맞춘다.
  */
-export function getCategoryOrder(): string[] {
-  try {
-    if (fs.existsSync(SIDEBAR_CONFIG)) {
-      const json = JSON.parse(fs.readFileSync(SIDEBAR_CONFIG, "utf8"));
-      if (Array.isArray(json?.categories) && json.categories.length > 0) {
-        return json.categories.map(String);
-      }
+function decodeSlug(slug: string[]): string[] {
+  return slug.map((s) => {
+    if (!/%[0-9A-Fa-f]{2}/.test(s)) return s;
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return s;
     }
-  } catch {
-    /* malformed config — fall back */
-  }
-  return DEFAULT_CATEGORY_ORDER;
-}
-
-function categoryRank(category: string, order: string[]): number {
-  const i = order.indexOf(category);
-  return i === -1 ? order.length : i;
-}
-
-/** Recursively collect every .mdx file path under content/docs. */
-function walk(dir: string): string[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return walk(full);
-    if (entry.isFile() && entry.name.endsWith(".mdx")) return [full];
-    return [];
   });
 }
 
-function fileToSlug(file: string): string[] {
-  const rel = path.relative(CONTENT_ROOT, file).replace(/\.mdx$/, "");
-  return rel.split(path.sep);
+function meta(d: Pick<DocFull, keyof DocMeta>): DocMeta {
+  return {
+    slug: d.slug,
+    url: d.url,
+    title: d.title,
+    description: d.description,
+    category: d.category,
+    order: d.order,
+  };
 }
 
-function readDocFile(file: string): Doc {
-  const slug = fileToSlug(file);
-  const raw = fs.readFileSync(file, "utf8");
-  const { content, data } = matter(raw);
-  const meta: DocMeta = {
-    slug,
-    url: "/docs/" + slug.join("/"),
-    title: String(data.title ?? slug[slug.length - 1]),
-    description: String(data.description ?? ""),
-    category: String(data.category ?? "문서"),
-    order: Number(data.order ?? 999),
-  };
-  return { ...meta, body: content, toc: extractToc(content) };
+/**
+ * Ordered list of sidebar categories, managed via `content/sidebar.json`.
+ * Falls back to a sensible default.
+ */
+export function getCategoryOrder(): string[] {
+  return guide().categoryOrder();
 }
 
 /** Pull h2/h3 headings, matching the ids that rehype-slug will emit. */
 export function extractToc(body: string): TocItem[] {
-  const slugger = new GithubSlugger();
-  const lines = body.split("\n");
-  const items: TocItem[] = [];
-  let inFence = false;
-  for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence;
-    if (inFence) continue;
-    const m = /^(#{2,3})\s+(.*)$/.exec(line);
-    if (!m) continue;
-    const text = m[2].replace(/[*_`]/g, "").trim();
-    items.push({
-      id: slugger.slug(text),
-      text,
-      level: m[1].length as 2 | 3,
-    });
-  }
-  return items;
+  return extractTocImpl(body);
 }
 
-let _cache: Doc[] | null = null;
-function allDocs(): Doc[] {
-  // In development we re-read from disk on every request so the in-browser
-  // edit mode reflects saved changes immediately. In production we cache.
-  if (process.env.NODE_ENV !== "production") {
-    return walk(CONTENT_ROOT).map(readDocFile);
-  }
-  if (!_cache) _cache = walk(CONTENT_ROOT).map(readDocFile);
-  return _cache;
-}
-
-export function getAllDocMeta(): DocMeta[] {
-  return allDocs()
-    .map(({ body: _body, toc: _toc, ...meta }) => meta)
+export function getAllDocMeta(space: ContentSpace = "guide"): DocMeta[] {
+  const sp = spaceOf(space);
+  if (!sp) return [];
+  return sp
+    .listDocs()
+    .map(meta)
     .sort((a, b) => a.order - b.order);
 }
 
-export function getDoc(slug: string[]): Doc | null {
-  const target = slug.join("/");
-  return allDocs().find((d) => d.slug.join("/") === target) ?? null;
+export function getDoc(slug: string[], space: ContentSpace = "guide"): Doc | null {
+  const sp = spaceOf(space);
+  if (!sp) return null;
+  let d: DocFull | null = null;
+  try {
+    d = sp.getDoc(decodeSlug(slug));
+  } catch {
+    return null; // 잘못된 경로 → 404
+  }
+  if (!d) return null;
+  return { ...meta(d), path: d.path, body: d.body, toc: d.toc };
 }
 
 export function getAllSlugs(): string[][] {
-  return allDocs().map((d) => d.slug);
+  return guide()
+    .listDocs()
+    .map((d) => d.slug);
 }
 
 /** Sidebar tree: grouped by category, ordered by sidebar.json then `order`. */
-export function getNav(): NavGroup[] {
-  const categoryOrder = getCategoryOrder();
-  const groups = new Map<string, DocMeta[]>();
-  for (const meta of getAllDocMeta()) {
-    const list = groups.get(meta.category) ?? [];
-    list.push(meta);
-    groups.set(meta.category, list);
-  }
-  return [...groups.entries()]
-    .map(([category, items]) => ({
-      category,
-      order: categoryRank(category, categoryOrder),
-      items: items.sort((a, b) => a.order - b.order),
-    }))
-    .sort((a, b) => a.order - b.order || a.category.localeCompare(b.category));
+export function getNav(space: ContentSpace = "guide"): NavGroup[] {
+  const sp = spaceOf(space);
+  if (!sp) return [];
+  return sp
+    .tree()
+    .groups.filter((g) => g.items.length > 0)
+    .map((g) => ({ category: g.category, order: g.order, items: g.items.map(meta) }));
 }
 
 /** Flattened, ordered list for prev/next navigation. */
-export function getFlatDocs(): DocMeta[] {
-  return getNav().flatMap((g) => g.items);
+export function getFlatDocs(space: ContentSpace = "guide"): DocMeta[] {
+  return getNav(space).flatMap((g) => g.items);
 }
 
-export function getAdjacent(slug: string[]): {
+export function getAdjacent(slug: string[], space: ContentSpace = "guide"): {
   prev: DocMeta | null;
   next: DocMeta | null;
 } {
-  const flat = getFlatDocs();
-  const i = flat.findIndex((d) => d.slug.join("/") === slug.join("/"));
+  const flat = getFlatDocs(space);
+  const key = decodeSlug(slug).join("/");
+  const i = flat.findIndex((d) => d.slug.join("/") === key);
   return {
     prev: i > 0 ? flat[i - 1] : null,
     next: i >= 0 && i < flat.length - 1 ? flat[i + 1] : null,
@@ -203,16 +164,18 @@ export interface SearchDoc {
   headings: string[];
 }
 
-/** Lightweight client-side search index: title, description, headings. */
+/**
+ * Lightweight client-side search index: title, description, headings.
+ * (본문까지 검색하는 색인은 GET /api/wiki/<space>/search)
+ */
 export function getSearchIndex(): SearchDoc[] {
-  const order = getFlatDocs().map((d) => d.url);
-  return allDocs()
+  return guide()
+    .searchIndex()
     .map((d) => ({
       title: d.title,
       description: d.description,
       category: d.category,
       url: d.url,
-      headings: d.toc.map((t) => t.text),
-    }))
-    .sort((a, b) => order.indexOf(a.url) - order.indexOf(b.url));
+      headings: d.headings,
+    }));
 }

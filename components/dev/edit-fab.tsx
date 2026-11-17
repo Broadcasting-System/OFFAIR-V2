@@ -17,7 +17,7 @@ export function EditFab({
   return (
     <Link
       href={target}
-      className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full border border-beam-500/50 bg-ink-900/90 px-4 py-2.5 text-sm font-medium text-beam-200 shadow-glow backdrop-blur transition-colors hover:border-beam-400 hover:text-white"
+      className="fixed right-5 bottom-5 z-40 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg shadow-pop transition-colors hover:bg-accent-hover"
       title="수정 (dev)"
     >
       <PencilIcon />

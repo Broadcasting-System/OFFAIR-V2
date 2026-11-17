@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // 개발 표시(N)가 왼쪽 아래 레일의 내 메뉴(아바타)를 가리지 않게 오른쪽 아래로
+  devIndicators: { position: "bottom-right" },
+  // 문서 저장소(lib/store)는 경로를 환경 변수로 정하므로 추적기가 content/ 를 못 본다.
+  // Vercel 사본이 ISR 로 다시 그릴 때 문서를 읽을 수 있게 명시적으로 넣는다.
+  outputFileTracingIncludes: {
+    "/**": ["./content/**/*"],
+  },
 };
 
 export default nextConfig;

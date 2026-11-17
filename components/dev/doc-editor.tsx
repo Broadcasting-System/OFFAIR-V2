@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeftIcon, CheckIcon } from "@/components/shell/icons";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -72,7 +73,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
           ]);
         const { default: Content } = await evaluate(stripFrontmatter(source), {
           ...runtime,
-          remarkPlugins: [remarkGfm],
+          remarkPlugins: [[remarkGfm, { singleTilde: false }]],
           rehypePlugins: [rehypeSlug],
         });
         if (!cancelled) {
@@ -178,15 +179,15 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col">
+    <div className="flex h-[calc(100dvh-52px)] flex-col min-[769px]:h-dvh">
       {/* toolbar */}
       <div className="flex flex-wrap items-center gap-3 border-b border-line bg-ink-900/70 px-4 py-2.5 backdrop-blur">
         <Link
           href="/edit"
-          className="text-fg-muted transition-colors hover:text-white"
+          className="text-fg-muted transition-colors hover:text-fg"
           aria-label="문서 목록"
         >
-          ←
+          <ArrowLeftIcon size={16} />
         </Link>
         <span className="rounded bg-amber-400/10 px-2 py-0.5 font-mono text-[0.7rem] font-semibold uppercase tracking-wider text-amber-300">
           Edit mode
@@ -204,7 +205,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
 
         <div className="ml-auto flex items-center gap-2">
           {saved === "ok" && (
-            <span className="font-mono text-xs text-emerald-300">저장됨 ✓</span>
+            <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-300"><CheckIcon size={13} />저장됨</span>
           )}
           {saved === "error" && (
             <span className="font-mono text-xs text-rose-300">저장 실패</span>
@@ -212,7 +213,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
           {docUrl && (
             <Link
               href={docUrl}
-              className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted transition-colors hover:border-line-strong hover:text-white"
+              className="rounded-md border border-line px-3 py-1.5 text-sm text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
             >
               문서 보기
             </Link>
@@ -250,7 +251,7 @@ export function DocEditor({ relPath, initialSource, docUrl }: DocEditorProps) {
             onScroll={() => setSlash(null)}
             onBlur={() => setTimeout(() => setSlash(null), 120)}
             spellCheck={false}
-            className="size-full resize-none bg-[#060a12] p-5 font-mono text-[0.82rem] leading-relaxed text-fg outline-none placeholder:text-fg-faint"
+            className="size-full resize-none bg-bg-soft p-5 font-mono text-[0.82rem] leading-relaxed text-fg outline-none placeholder:text-fg-faint"
             placeholder="여기에 MDX를 작성하세요…  '/' 를 입력하면 컴포넌트 메뉴가 열립니다"
           />
 
@@ -310,7 +311,6 @@ function SlashMenu({
       ?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  let lastGroup = "";
   return (
     <div
       ref={listRef}
@@ -319,8 +319,8 @@ function SlashMenu({
       role="listbox"
     >
       {matches.map((s, i) => {
-        const header = s.group !== lastGroup ? s.group : null;
-        lastGroup = s.group;
+        const header =
+          i === 0 || matches[i - 1].group !== s.group ? s.group : null;
         return (
           <div key={s.label}>
             {header && (

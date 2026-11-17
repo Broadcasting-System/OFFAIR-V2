@@ -1,67 +1,175 @@
 import Link from "next/link";
-import { Hero } from "@/components/hero";
+import { ArrowRightIcon } from "@/components/shell/icons";
 import { EditFab } from "@/components/dev/edit-fab";
-import { getNav } from "@/lib/content";
+import { HomeSearch } from "@/components/home-search";
+import { PageBar } from "@/components/shell/page-bar";
+import { SiteFooter } from "@/components/site-footer";
+import { EmptySpace } from "@/components/space/empty-space";
+import { getCategoryOrder, getNav } from "@/lib/content";
+import { formatDate, getRecentDocs } from "@/lib/doc-info";
+import { getHomeConfig } from "@/lib/site";
+
+const PER_CATEGORY = 4;
 
 export default function HomePage() {
   const nav = getNav();
+  const recent = getRecentDocs(6);
+  const { title, description, primaryCta, secondaryCta } = getHomeConfig();
 
   return (
     <>
-      <Hero />
+      <PageBar crumbs={[{ label: "가이드북" }]} />
 
-      <section className="mx-auto max-w-[90rem] px-5 py-16 sm:px-8 lg:px-12">
-        <div className="mb-10 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 font-display text-[0.7rem] uppercase tracking-[0.28em] text-beam-400">
-              Index
-            </p>
-            <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
-              가이드북 둘러보기
-            </h2>
-          </div>
-          <Link
-            href="/docs/intro"
-            className="hidden whitespace-nowrap text-sm text-fg-muted transition-colors hover:text-beam-300 sm:block"
-          >
-            전체 문서 →
-          </Link>
-        </div>
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
+        <div className="mx-auto w-full max-w-[960px] px-4 pt-6 pb-20 sm:px-8 sm:pt-10">
+          {/* 머리말 */}
+          <section className="max-w-[640px]">
+            {title && (
+              <p className="text-[13px] font-bold tracking-[0.06em] text-accent">
+                {title}
+              </p>
+            )}
+            <h1 className="mt-2 text-[30px] leading-tight font-bold tracking-[-0.01em] text-fg sm:text-[36px]">
+              방송부 가이드북
+            </h1>
+            {description && (
+              <p className="mt-3 text-[16px] leading-relaxed text-fg-2 sm:text-[17px]">
+                {description}
+              </p>
+            )}
+            <div className="mt-6">
+              <HomeSearch />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {primaryCta.label && (
+                <Link
+                  href={primaryCta.href || "#"}
+                  className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-semibold text-accent-fg transition-colors hover:bg-accent-hover"
+                >
+                  {primaryCta.label}
+                </Link>
+              )}
+              {secondaryCta.label && (
+                <Link
+                  href={secondaryCta.href || "#"}
+                  className="inline-flex h-8 items-center rounded-md border border-line px-3 text-sm font-medium text-fg transition-colors hover:bg-hover"
+                >
+                  {secondaryCta.label}
+                </Link>
+              )}
+            </div>
+          </section>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {nav.map((group) => (
-            <div
-              key={group.category}
-              className="hud-frame rounded-xl border border-line bg-ink-900/60 p-6 transition-colors hover:border-line-strong"
-            >
-              <h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-beam-300">
-                {group.category}
-              </h3>
-              <ul className="mt-4 flex flex-col gap-2.5">
-                {group.items.map((item) => (
-                  <li key={item.url}>
-                    <Link
-                      href={item.url}
-                      className="group flex items-baseline gap-2 text-fg-muted transition-colors hover:text-white"
+          {nav.length === 0 && <EmptySpace categories={getCategoryOrder()} />}
+
+          {/* 카테고리 */}
+          {nav.length > 0 && (
+            <section aria-labelledby="home-categories" className="mt-14">
+              <h2
+                id="home-categories"
+                className="text-[13px] font-semibold tracking-[0.04em] text-fg-3"
+              >
+                카테고리
+              </h2>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {nav.map((group) => {
+                  const shown = group.items.slice(0, PER_CATEGORY);
+                  const rest = group.items.length - shown.length;
+                  return (
+                    <li
+                      key={group.category}
+                      className="flex flex-col rounded-xl border border-line bg-bg p-4"
                     >
-                      <span className="mt-2 size-1 shrink-0 rotate-45 bg-line-strong transition-colors group-hover:bg-beam-400" />
-                      <span>
-                        <span className="text-[0.95rem]">{item.title}</span>
-                        {item.description && (
-                          <span className="block text-xs text-fg-faint">
-                            {item.description}
-                          </span>
-                        )}
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="text-[15px] font-bold text-fg">
+                          {group.category}
+                        </h3>
+                        <span className="ml-auto text-xs text-fg-3">
+                          문서 {group.items.length}
+                        </span>
+                      </div>
+                      <ul className="mt-2.5 flex flex-col">
+                        {shown.map((item) => (
+                          <li key={item.url}>
+                            <Link
+                              href={item.url}
+                              className="-mx-2 block truncate rounded-md px-2 py-1 text-[14px] text-fg-2 transition-colors hover:bg-hover hover:text-fg"
+                            >
+                              {item.title}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                      {rest > 0 && (
+                        <Link
+                          href={group.items[PER_CATEGORY].url}
+                          className="mt-1.5 self-start rounded text-[13px] font-medium text-accent hover:underline"
+                        >
+                          외 {rest}개 더 보기{" "}
+                          <ArrowRightIcon
+                            size={13}
+                            className="inline align-[-2px]"
+                          />
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {/* 최근 바뀐 문서 */}
+          {recent.length > 0 && (
+            <section aria-labelledby="home-recent" className="mt-14">
+              <div className="flex items-baseline">
+                <h2
+                  id="home-recent"
+                  className="text-[13px] font-semibold tracking-[0.04em] text-fg-3"
+                >
+                  최근 바뀐 문서
+                </h2>
+                <Link
+                  href="/recent"
+                  className="ml-auto rounded text-[13px] font-medium text-accent hover:underline"
+                >
+                  전체 보기
+                </Link>
+              </div>
+              <ul className="mt-3 divide-y divide-line-2 rounded-xl border border-line">
+                {recent.map((doc) => (
+                  <li key={doc.url}>
+                    <Link
+                      href={doc.url}
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-bg-soft"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14.5px] font-medium text-fg">
+                          {doc.title}
+                        </span>
+                        <span className="block truncate text-[13px] text-fg-3">
+                          {doc.category}
+                          {doc.description && ` · ${doc.description}`}
+                        </span>
                       </span>
+                      {doc.updatedAt && (
+                        <time
+                          dateTime={doc.updatedAt.toISOString()}
+                          className="flex-none text-xs text-fg-3"
+                        >
+                          {formatDate(doc.updatedAt)}
+                        </time>
+                      )}
                     </Link>
                   </li>
                 ))}
               </ul>
-            </div>
-          ))}
+            </section>
+          )}
         </div>
-      </section>
+      </main>
 
+      <SiteFooter />
       <EditFab href="/edit/home" label="홈 수정" />
     </>
   );
