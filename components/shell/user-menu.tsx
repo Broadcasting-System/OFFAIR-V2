@@ -23,7 +23,7 @@ import { dayLabel } from "@/lib/wiki/time";
 
 /**
  * 레일 아래 아바타 → 내 메뉴 (시안 f8-D).
- * 이름 · 기수·역할 / 내 초안 · 나를 부른 댓글 · 내가 고친 문서 / 테마 · 로그아웃.
+ * 이름 · 기수·역할 / 초안 · 댓글 · 수정한 문서 / 테마 · 로그아웃.
  * 로그인하지 않았으면 아바타 대신 로그인 단추.
  */
 
@@ -152,7 +152,7 @@ function MenuPop({ me, placement, anchor, onClose }: { me: Me; placement: "rail"
         </span>
       </div>
 
-      <MenuRow icon={<PencilIcon size={17} />} label="내 초안" right={count(drafts.length)} open={panel === "drafts"} onClick={() => setPanel(panel === "drafts" ? null : "drafts")} />
+      <MenuRow icon={<PencilIcon size={17} />} label="초안" right={count(drafts.length)} open={panel === "drafts"} onClick={() => setPanel(panel === "drafts" ? null : "drafts")} />
       {panel === "drafts" && (
         <SubList empty="이 브라우저에 남은 초안이 없어요">
           {drafts.map((d) => (
@@ -162,21 +162,21 @@ function MenuPop({ me, placement, anchor, onClose }: { me: Me; placement: "rail"
       )}
       <MenuRow
         icon={<CommentIcon size={17} />}
-        label="나를 부른 댓글"
+        label="댓글"
         right={act ? count(act.mentions.length) : ""}
         open={panel === "mentions"}
         onClick={() => setPanel(panel === "mentions" ? null : "mentions")}
       />
       {panel === "mentions" && (
-        <SubList empty={actError ? "불러오지 못했어요" : act ? "나를 부른 댓글이 없어요" : "불러오는 중…"}>
+        <SubList empty={actError ? "불러오지 못했어요" : act ? "댓글이 없어요" : "불러오는 중…"}>
           {(act?.mentions ?? []).map((m) => (
             <SubLink key={m.id} href={m.url} onClick={onClose} title={`${m.author.name}: ${m.body}`} meta={`${m.title} · ${dayLabel(new Date(m.createdAt))}`} />
           ))}
         </SubList>
       )}
-      <MenuRow icon={<ClockIcon size={17} />} label="내가 고친 문서" right="" open={panel === "edits"} onClick={() => setPanel(panel === "edits" ? null : "edits")} />
+      <MenuRow icon={<ClockIcon size={17} />} label="수정한 문서" right="" open={panel === "edits"} onClick={() => setPanel(panel === "edits" ? null : "edits")} />
       {panel === "edits" && (
-        <SubList empty={actError ? "불러오지 못했어요" : act ? "고친 문서가 아직 없어요" : "불러오는 중…"}>
+        <SubList empty={actError ? "불러오지 못했어요" : act ? "수정한 문서가 아직 없어요" : "불러오는 중…"}>
           {(act?.edits ?? []).map((e) => (
             <SubLink key={`${e.space}:${e.url}`} href={e.url} onClick={onClose} title={e.title} meta={`${SPACE_LABEL[e.space]} · ${dayLabel(new Date(e.date))}`} />
           ))}
