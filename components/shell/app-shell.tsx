@@ -21,6 +21,7 @@ import {
   MenuIcon,
   MoonIcon,
   SearchIcon,
+  SignalIcon,
   SunIcon,
   TrashIcon,
   TreeIcon,
@@ -104,6 +105,9 @@ export function AppShell({
 
   const recentActive = pathname === "/recent";
   const membersActive = pathname.startsWith("/members");
+  const onairActive = pathname === "/onair";
+  // ONAIR 상태 — 부원 이상 (ONAIR 서버가 꺼져 있어도 최근 로그인 기록으로 보인다)
+  const canSeeOnair = !!me?.onair?.canView;
 
   return (
     <>
@@ -155,6 +159,11 @@ export function AppShell({
             >
               <LockIcon />
             </RailLink>
+            {canSeeOnair && (
+              <RailLink href="/onair" label="ONAIR 상태" active={onairActive}>
+                <SignalIcon />
+              </RailLink>
+            )}
             <span className="flex-1" />
             <ThemeButton className="rail-tip" />
             <UserMenu placement="rail" />
@@ -243,6 +252,11 @@ export function AppShell({
               >
                 <ClockIcon size={16} /> 최근 바뀐 문서
               </Link>
+              {canSeeOnair && (
+                <Link href="/onair" className="flex items-center gap-2 rounded-md py-1.5 text-fg-2">
+                  <SignalIcon size={16} /> ONAIR 상태
+                </Link>
+              )}
             </div>
           </div>
         </aside>

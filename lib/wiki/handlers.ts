@@ -15,6 +15,7 @@ import {
 import { HttpError, badRequest, forbidden, handle, json, notFound, readJson, unauthorized } from "./http";
 import { mdxToLlmText } from "./llm-text";
 import { revalidateSpace } from "./revalidate";
+import { canStartOnair, canViewOnair, onairViewer } from "@/lib/onair/viewer";
 
 /**
  * 위키 API 본체. app/api/** 의 route.ts 는 이 함수들을 부르기만 한다
@@ -110,7 +111,9 @@ function afterWrite(id: SpaceId) {
 
 export function me(req: Request): Promise<Response> {
   return handle(req, async () => {
-    const v = await getViewer(req);
+    // 위키 권한은 ONAIR 가 정한 사람(base). ONAIR 화면 메뉴만 ONAIR 가 꺼졌을 때의 최근 기록도 본다
+    const who = await onairViewer(req);
+    const v = who.base;
     const store = getStore();
     return json({
       role: v.role,
@@ -121,6 +124,7 @@ export function me(req: Request): Promise<Response> {
       roleLabel: v.roleLabel ?? null,
       ...permissions(v),
       readOnly: store.config.readOnly,
+      onair: { canView: canViewOnair(who.viewer), canStart: canStartOnair(who.viewer) },
     });
   });
 }
