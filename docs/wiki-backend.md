@@ -11,6 +11,7 @@ OFFAIR 를 학교 서버 PC 에서 도는 위키로 쓰기 위한 서버 쪽 구
 | `/members`, `/members/<slug…>` | 부원 공간 첫 화면·문서 | **요청마다** 권한 확인(`lib/wiki/server-viewer.ts`). 권한이 없으면 문서가 있든 없든 로그인 벽만 그린다. `generateStaticParams` 없음 |
 | `/write/<space>/<slug…>` | 편집기 (`guide`·`members`) | 요청마다 권한 확인. 손님 → 로그인 벽, 읽기만 되는 사람(졸업생 등) → "편집 권한이 없어요". 저장은 `PUT /api/wiki/<space>/docs/<slug>` |
 | `/login?next=<경로>` | 로그인 벽의 [로그인] | Cloudflare Access 가 지키는 경로. 통과하면 `next`(사이트 안 경로만)로 303 |
+| `/onair` | ONAIR 상태·다시 켜기 | 요청마다 권한 확인. 부원 이상만 보이고, [ONAIR 다시 켜기] 는 부장·최고 관리자만. 아래 "ONAIR 다시 켜기" |
 
 편집 주소는 언제나 `editHref(space, slug)`(`lib/wiki/links.ts`) 로 만든다 — 트리·검색·문서 위 막대·팔레트(E)·"새 문서"(트리 ＋, 팔레트 N)가 같은 규칙.
 "새 문서" 는 `POST /api/wiki/<space>/docs` 로 먼저 만든 뒤 그 문서의 편집기를 연다. 게시하면 읽기 화면(`/docs/…`, `/members/…`)으로 돌아간다.
@@ -87,6 +88,10 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 | `OFFAIR_PUBLIC_URL` | 없음 | 바깥 주소 (예: `https://offair.bssmcast.com`). 검색 결과·문서 글의 `url` 을 절대 주소로. 없으면 `/docs/…` 상대 경로 |
 | `OFFAIR_DEV_COHORT` | 없음 | 개발용 우회 사람의 기수 (내 메뉴에 "4기" 처럼 보인다) |
 | `OFFAIR_ALLOWED_ORIGINS` | 없음 | 쓰기 요청의 Origin 허용 목록(콤마). 터널이 `Host` 를 `localhost` 로 바꿔 넘겨 쓰기가 403 이 될 때 공개 호스트 이름을 넣는다 |
+| `OFFAIR_ACCESS_TEAM` / `OFFAIR_ACCESS_AUD` | 없음 | ONAIR 가 꺼졌을 때 Access 토큰을 직접 확인할 팀 도메인(`bssmcast`)·AUD(콤마). 없으면 ONAIR 가 확인해 준 토큰에서 배운 값을 쓴다 |
+| `OFFAIR_ACCESS_ROSTER_DAYS` | `30` | ONAIR 가 꺼졌을 때 믿는 "최근 로그인 기록" 의 유효 기간(일) |
+| `OFFAIR_ONAIR_START_GAP_MS` | `60000` | ONAIR 다시 켜기 사이 최소 간격 |
+| `ONAIR_START_SCRIPT` | 없음 | 'ONAIR 시작.cmd' 전체 경로. 없으면 바탕화면에서 찾는다 |
 
 ## 권한
 
@@ -110,7 +115,7 @@ GitHub 에서 빌드하는 Vercel 사본에는 `guide` 만 들어간다. Vercel 
 
 | 메서드 | 경로 | 권한 | 설명 |
 | --- | --- | --- | --- |
-| GET | `/api/me` | 누구나 | `{ role, name, memberId, authenticated, cohort, roleLabel, canEdit, canReadMembers, canComment, canModerate, readOnly }`. `cohort`(기수)·`roleLabel` 은 ONAIR 가 주면 그대로 |
+| GET | `/api/me` | 누구나 | `{ role, name, memberId, authenticated, cohort, roleLabel, canEdit, canReadMembers, canComment, canModerate, readOnly, onair: { canView, canStart } }`. `cohort`(기수)·`roleLabel` 은 ONAIR 가 주면 그대로. `onair` 는 ONAIR 상태 화면 메뉴용(아래 "ONAIR 다시 켜기") |
 | GET | `/api/me/activity` | 로그인 | 내 메뉴: `{ mentions: [{ space, slug, url, title, id, threadId, author, body, createdAt, quote }], edits: [{ space, slug, url, title, category, date, message, rev }] }`. 읽을 수 있는 공간만. 고친 문서는 커밋 작성자 이메일 `<memberId>@<도메인>`(없으면 이름)으로 찾는다 |
 | GET | `/api/wiki/<space>/tree` | 읽기 | `{ categories, groups: [{ category, order, items: DocMeta[] }] }`. 빈 카테고리도 포함 |
 | GET | `/api/wiki/<space>/search[?q=]` | 읽기 | q 없으면 색인 전체(제목·설명·카테고리·소제목·본문 평문), q 있으면 점수순 결과와 스니펫 |
@@ -218,6 +223,33 @@ curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text
 - `OFFAIR 설치.cmd` — 온에어 폴더 아래 `OFFAIR-V2` 에 main 을 받고 `npm ci` → `npm run build`, 작업 스케줄러 `OFFAIR Autostart`(로그온 40초 뒤) 등록 후 위키를 켠다. Access 앱 AUD 를 넣으면 종·실시간 마이크·녹음이 없을 때 터널 설정(`onair-cloudflared\config.yml`)에 `offair.bssmcast.com → 127.0.0.1:3020` 을 넣어 터널만 다시 켜고, ONAIR `.env` 의 `CF_ACCESS_AUD` 에 AUD 를 덧붙여 ONAIR 서버(8000)만 다시 켠다. 바꾼 파일은 `.bak-offair` 사본이 남고 기록은 `온에어\offair-install-log.txt`. 새 main 으로 바꿀 때도 다시 실행하면 된다(AUD 는 엔터로 건너뜀).
 - `OFFAIR 시작.cmd` — `next start --hostname 127.0.0.1 --port 3020` 을 최소화 창으로 띄우고 꺼지면 5초 뒤 다시 켠다. 기본 환경 변수는 `ONAIR_API_BASE=http://127.0.0.1:8000`, `OFFAIR_PUBLIC_URL=https://offair.bssmcast.com`, `OFFAIR_ALLOWED_ORIGINS=offair.bssmcast.com`, `OFFAIR_DATA_DIR=온에어\offair-data`, `OFFAIR_GIT_PUSH=0`. 바꾸려면 `온에어\offair.env` 에 `KEY=VALUE` 줄을 넣는다(push 자격 증명을 넣은 뒤 `OFFAIR_GIT_PUSH=1` 등).
 
+## ONAIR 다시 켜기 (`/onair`)
+
+ONAIR 서버(8000)가 통째로 꺼지면 ONAIR MCP·원격 도구도 같이 꺼져서, 지금까지는 서버 PC 에 원격으로 들어가야 했다.
+OFFAIR 는 ONAIR 와 따로 돌기 때문에 그때 대신 켜는 길이 된다.
+
+- 화면: 레일(모바일은 서랍 아래)의 [ONAIR 상태] → `/onair`. 서버(8000)·송출 화면(3000)·컨트롤(3001) 세 줄에 켜짐/꺼짐, 서버는 `GET /health` 가 `{"status":"healthy"}` 인지도 보인다.
+- [ONAIR 다시 켜기] → 화면 안에서 한 번 더 확인 → `POST /api/onair/start`. 그 뒤 3초마다 다시 보고, 다 켜지거나 150초가 지나면 멈춘다.
+- 하는 일: 이 계정 바탕화면(`[Environment]::GetFolderPath('Desktop')`, OneDrive 로 옮겨졌어도. 못 찾으면 `%USERPROFILE%\Desktop`)의 `ONAIR 시작.cmd` 를 `explorer.exe "<경로>"` 로 실행한다. 그 스크립트는 이미 열린 포트를 건너뛰므로 켜져 있는 것은 다시 켜지 않는다. explorer 를 거치면 OFFAIR 프로세스와 떨어져 돌고, OFFAIR 가 관리자 권한이어도 ONAIR 는 보통 권한으로 켜진다(관리자 권한 ONAIR 는 업데이트 스크립트를 깨뜨린 적이 있다).
+- 막는 것: Windows 가 아니면 501, 셋 다 켜져 있으면 409 "이미 다 켜져 있어요", 60초 안에 다시 누르면 429, 스크립트가 없으면 503. 누가 눌렀는지는 `<데이터 폴더>/logs/onair-start.log` 에 남는다.
+- OFFAIR 는 로그온 세션에서 돌아야 한다(지금처럼 작업 스케줄러 '로그온 시' → `OFFAIR 시작.cmd`). Windows 서비스(세션 0)로 돌리면 explorer 로 띄운 창이 보이지 않거나 실행되지 않는다.
+
+| 메서드 | 경로 | 권한 | 설명 |
+| --- | --- | --- | --- |
+| GET | `/api/onair/status` | 부원·부장·최고 관리자 | `{ checkedAt, apps: [{ id, name, port, up, health? }], allUp, allDown, canStart, startSupported, identity: "onair"\|"recent" }` |
+| POST | `/api/onair/start` | 부장·최고 관리자 | 같은 사이트에서 온 요청만(`Origin` 필수, `Sec-Fetch-Site` 가 있으면 `same-origin`). 202 `{ ok, launched: { script, via }, starting: [이름…], status }` |
+
+### ONAIR 가 꺼졌을 때 누구인지 아는 법
+
+평소 신원은 ONAIR 가 정하므로, ONAIR 가 꺼지면 모두 손님이 되어 단추를 누를 사람이 없어진다. 그래서 이 화면에서만(`lib/onair/viewer.ts`):
+
+1. ONAIR 가 어떤 Access 토큰을 부원 이상으로 확인해 줄 때마다, 토큰 안의 이메일·발급자·AUD 와 ONAIR 가 준 역할을 `<데이터 폴더>/onair-access.json` 에 적는다 (`lib/onair/access.ts`).
+2. ONAIR 가 답하지 않을 때(연결 실패·시간 초과·5xx)만, 요청의 토큰을 Cloudflare 공개 키(`https://<팀>.cloudflareaccess.com/cdn-cgi/access/certs`)로 직접 확인한다 — RS256 서명, 1에서 배운(또는 env 의) 발급자·AUD, 만료.
+3. 그 이메일이 명단에 있고 마지막 확인이 30일 안이면 그 역할로 본다. 위키 읽기·쓰기 권한은 바뀌지 않는다(그때도 손님).
+
+그러니 부장은 **ONAIR 가 켜져 있을 때 OFFAIR 에 한 번 로그인해 두어야** 한다. 명단에 없거나 30일이 지났으면 화면이 "누구인지 확인하지 못했어요" 를 보여 주고, 그때는 예전처럼 원격으로 들어가 켠다.
+명단은 ONAIR 가 켜져 있을 때 그 사람이 다시 들어오면 고쳐진다(역할이 졸업생·교사로 바뀌었으면 지움). ONAIR 에서 아예 빠진 사람(손님 답)은 토큰을 믿을 수 없어 지우지 않고 30일이 지나면 쓰지 않는다. 바로 막으려면 `onair-access.json` 에서 그 줄을 지우고 OFFAIR 를 다시 켠다.
+
 ## 서버 PC 에 배포할 때 해야 할 일 (이 작업에서는 아무것도 설정하지 않았다)
 
 1. **Cloudflare Access 앱**: 위 "로그인 벽과 Cloudflare Access" 대로 `/login` 경로를 덮는 self-hosted 앱을 만들고 부원 이메일 정책을 건다. 공개 문서·API 는 Access 밖에 둔다. 쿠키(`CF_Authorization`)가 `Path=/` 로 가는지 꼭 확인한다.
@@ -238,5 +270,5 @@ curl -s "http://127.0.0.1:3000/api/wiki/members/docs/meeting/2026-11?format=text
 npm test   # node:test + tsx. 임시 폴더에 git 저장소를 만들어 돌린다
 ```
 
-경로 안전, 저장 충돌(409), 커밋·이력·diff·되돌리기, 부원 공간 격리, 역할별 권한 표(ONAIR 응답은 흉내), 업로드·목록·표시 달기 보조 파일, 내 메뉴, 댓글, 자동 push(로컬 bare 원격), CUE 서비스 토큰·문서 글(format=text), 로그인 주소를 다룬다.
+경로 안전, 저장 충돌(409), 커밋·이력·diff·되돌리기, 부원 공간 격리, 역할별 권한 표(ONAIR 응답은 흉내), 업로드·목록·표시 달기 보조 파일, 내 메뉴, 댓글, 자동 push(로컬 bare 원격), CUE 서비스 토큰·문서 글(format=text), 로그인 주소, ONAIR 다시 켜기(상태·권한·간격 제한·Windows 전용·스크립트 경로·ONAIR 가 꺼졌을 때 토큰 직접 확인)를 다룬다.
 편집기 변환기 테스트(vitest)는 `tests/fixtures/content/` 의 문서 사본을 쓴다 — `content/` 를 비워도 테스트는 돈다.

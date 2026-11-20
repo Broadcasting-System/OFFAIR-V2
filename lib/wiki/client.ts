@@ -18,6 +18,8 @@ export interface Me {
   canComment: boolean;
   canModerate: boolean;
   readOnly: boolean;
+  /** ONAIR 상태 화면(/onair) — 볼 수 있나·다시 켤 수 있나 */
+  onair?: { canView: boolean; canStart: boolean };
 }
 
 export class ApiError extends Error {

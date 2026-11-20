@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { SpaceId } from "@/lib/store/space";
 import { HttpError } from "./http";
 import { isLoopback, peerOf } from "./peer";
+import { rememberAccess } from "@/lib/onair/access";
 
 /**
  * 누가 요청했는지 — ONAIR 서버에 물어본다.
@@ -31,7 +32,8 @@ export interface Viewer {
   /** ONAIR 부원 정보 — 기수(예: "4"), 역할 이름(예: "부장"). 모르면 null */
   cohort?: string | null;
   roleLabel?: string | null;
-  source: "onair" | "dev" | "service" | "none";
+  /** roster = ONAIR 가 꺼져 있을 때 Access 토큰을 직접 확인하고 최근 기록으로 정한 사람 (ONAIR 화면에서만, lib/onair/viewer.ts) */
+  source: "onair" | "dev" | "service" | "none" | "roster";
 }
 
 export const GUEST: Viewer = {
@@ -195,18 +197,26 @@ export function serviceViewer(req: Request): Viewer | undefined {
 
 /** 요청자. ONAIR 가 안 되면 손님으로 본다 (공개 문서는 계속 보이게) */
 export async function getViewer(req: Request): Promise<Viewer> {
+  return (await resolveViewer(req)).viewer;
+}
+
+/**
+ * getViewer 와 같지만, 손님이 된 까닭이 "ONAIR 가 답하지 않음(꺼짐·느림·5xx)" 인지도 알려 준다.
+ * ONAIR 다시 켜기 화면(lib/onair/viewer.ts)이 그때만 Access 토큰을 직접 확인하는 데 쓴다.
+ */
+export async function resolveViewer(req: Request): Promise<{ viewer: Viewer; onairDown: boolean }> {
   const service = serviceViewer(req);
-  if (service) return service;
+  if (service) return { viewer: service, onairDown: false };
   const dev = devViewer();
-  if (dev) return dev;
+  if (dev) return { viewer: dev, onairDown: false };
 
   const token = tokenOf(req);
-  if (!token || token.length > 8192) return GUEST;
+  if (!token || token.length > 8192) return { viewer: GUEST, onairDown: false };
 
   const key = crypto.createHash("sha256").update(token).digest("hex");
   const now = Date.now();
   const hit = cache.get(key);
-  if (hit && hit.exp > now) return hit.viewer;
+  if (hit && hit.exp > now) return { viewer: hit.viewer, onairDown: false };
 
   const base = (process.env.ONAIR_API_BASE || "http://127.0.0.1:8000").replace(/\/+$/, "");
   const timeout = Number(process.env.OFFAIR_ONAIR_TIMEOUT_MS) || 3000;
@@ -219,8 +229,11 @@ export async function getViewer(req: Request): Promise<Viewer> {
     });
     if (!res.ok) {
       // 4xx 는 짧게 캐시, 5xx 는 캐시하지 않는다
-      if (res.status < 500) cache.set(key, { viewer: GUEST, exp: now + Math.min(ttl(), 10_000) });
-      return GUEST;
+      if (res.status < 500) {
+        cache.set(key, { viewer: GUEST, exp: now + Math.min(ttl(), 10_000) });
+        return { viewer: GUEST, onairDown: false };
+      }
+      return { viewer: GUEST, onairDown: true };
     }
     const j = (await res.json()) as Record<string, unknown>;
     let role = normalizeRole(j.role);
@@ -238,12 +251,14 @@ export async function getViewer(req: Request): Promise<Viewer> {
   } catch (e) {
     // ONAIR 가 꺼졌거나 느림 — 캐시하지 않고 손님으로
     console.warn("[offair] ONAIR 신원 확인 실패:", (e as Error).message);
-    return GUEST;
+    return { viewer: GUEST, onairDown: true };
   }
+  // ONAIR 가 확인해 준 부원은 기억해 둔다 — ONAIR 가 꺼졌을 때 'ONAIR 다시 켜기' 화면에서 쓴다
+  rememberAccess(token, viewer);
   if (cache.size >= MAX_CACHE) {
     for (const [k, v] of cache) if (v.exp <= now) cache.delete(k);
     if (cache.size >= MAX_CACHE) cache.clear();
   }
   cache.set(key, { viewer, exp: now + (viewer.role === "guest" ? Math.min(ttl(), 10_000) : ttl()) });
-  return viewer;
+  return { viewer, onairDown: false };
 }
