@@ -39,17 +39,34 @@ function Test-Port([int]$p) {
 }
 # 켜져 있는 위키를 끈다 — 위키(next start)가 node_modules 의 .node 파일을 잡고 있어서
 # 끄지 않으면 npm ci 가 EPERM(unlink) 으로 실패한다. 업데이트 동안 위키는 몇 분 꺼진다.
+# 위키는 'OFFAIR 시작' 이 띄운 PowerShell 감시 창이 5초 뒤 다시 켜므로, 포트를 연 node 에서
+# 부모를 따라 올라가 그 감시 창(powershell)까지 통째로 끈다 (명령줄 글자 비교에 기대지 않는다).
+function Get-Proc([int]$id) { return Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue }
 function Stop-Wiki {
   if (-not (Test-Port $port)) { return }
   Say "켜져 있는 위키를 잠깐 꺼요 (포트 $port)" Gray
-  Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -and $_.CommandLine.Contains("WindowTitle = 'OFFAIR 위키 ($port)'") } |
-    ForEach-Object { taskkill /PID $_.ProcessId /T /F 2>&1 | Out-Null }
-  Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-    ForEach-Object { taskkill /PID $_.OwningProcess /T /F 2>&1 | Out-Null }
-  $until = (Get-Date).AddSeconds(15)
-  while ((Test-Port $port) -and (Get-Date) -lt $until) { Start-Sleep 1 }
-  Start-Sleep 2
+  for ($round = 1; $round -le 3; $round++) {
+    $tops = @()
+    Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
+      $p = Get-Proc $_.OwningProcess; $top = $p
+      while ($p -and $p.ParentProcessId) {
+        $up = Get-Proc $p.ParentProcessId
+        if (-not $up -or $up.ProcessId -eq $PID -or $up.Name -notin @('node.exe', 'powershell.exe', 'pwsh.exe', 'cmd.exe')) { break }
+        $top = $up; $p = $up
+      }
+      if ($top) { $tops += $top.ProcessId }
+    }
+    Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+      Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -and $_.CommandLine.Contains('next start') -and $_.CommandLine.Contains("--port $port") } |
+      ForEach-Object { $tops += $_.ProcessId }
+    $tops | Select-Object -Unique | ForEach-Object { taskkill /PID $_ /T /F 2>&1 | Out-Null }
+    $until = (Get-Date).AddSeconds(15)
+    while ((Test-Port $port) -and (Get-Date) -lt $until) { Start-Sleep 1 }
+    Start-Sleep 8   # 감시 창이 남았으면 5초 뒤 다시 켜진다 — 그걸 보고 한 번 더
+    if (-not (Test-Port $port)) { return }
+    Say "위키가 다시 켜졌어요 — 한 번 더 꺼요 ($round/3)" Yellow
+  }
+  Say "위키를 끄지 못했어요 — 작업 표시줄의 'OFFAIR 위키 ($port)' 창을 닫고 다시 실행하세요" Red; Done 1
 }
 
 Write-Host ''
