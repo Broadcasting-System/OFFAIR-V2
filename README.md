@@ -1,12 +1,21 @@
 # OFFAIR — BSSM Broadcast Guide Book
 
-부산소프트웨어마이스터고 방송부 웹 가이드북. **Next.js 16 · TypeScript · Tailwind v4 · 파일 기반 MDX**.
+부산소프트웨어마이스터고 방송부 위키. **Next.js 16 · TypeScript · Tailwind v4 · 파일 기반 MDX**.
+
+공간은 둘이고 **둘 다 부원 전용**이다 (부원·부장·최고 관리자·졸업생(읽기만)). 손님·교사·미등록은 어느 화면을 열어도 로그인 벽만 본다.
+
+| 화면 이름 | 공간 id | 주소 | 문서 위치 |
+| --- | --- | --- | --- |
+| 가이드북 | `guide` | `/`, `/docs/…` | 이 저장소 `content/docs/` (GitHub 으로 push) |
+| 개발 문서 | `members` | `/members`, `/members/…` | 서버 PC 데이터 폴더 `<OFFAIR_DATA_DIR>/members` (어디에도 push 안 함) |
+
+> 이 GitHub 저장소가 공개인 동안에는 `content/` 의 가이드북 MDX 와 `public/uploads/` 가 GitHub 에서 그대로 보인다. 위키 화면은 막혀도 저장소는 따로 비공개로 돌려야 한다.
 
 ## 개발
 
 ```bash
 npm run dev     # 개발 서버
-npm run build   # 프로덕션 빌드 (모든 문서 SSG)
+npm run build   # 프로덕션 빌드 (모든 화면이 요청마다 권한을 확인하는 동적 렌더링, 문서는 빌드 결과에 안 들어간다)
 npm start       # 빌드 결과 실행
 ```
 
@@ -15,10 +24,15 @@ npm start       # 빌드 결과 실행
 서버 PC 에서 위키로 쓰기 위한 저장소·git 이력·API·권한은 [`docs/wiki-backend.md`](docs/wiki-backend.md) 참고.
 `npm test` 로 백엔드 테스트를 돌린다.
 
+Vercel 사본은 이제 쓸모가 없다: 빌드는 되지만(`VERCEL=1`, ONAIR 없음) 모든 화면이 로그인 벽이다.
+
+개발 문서 공간을 씨앗 폴더(`.md`·`.mdx`)로 처음 채우려면 `npm run import:dev-docs -- <폴더>` (바뀐 것만, 지우지 않음, 한 커밋).
+서버 PC 에서는 `OFFAIR 시작.cmd` 가 `온에어\ONAIR-SERVER\docs\offair-dev` 를 자동으로 가져온다. 자세한 규칙은 `docs/wiki-backend.md` "개발 문서 씨앗 가져오기".
+
 ## 위키 편집 (`/write/<공간>/<문서>`)
 
 문서 위 막대의 **편집**(또는 ⌘K → E, 서랍 트리의 ＋·새 문서)으로 연다. 부원(ONAIR 로그인) 이상만 열리고,
-게시하면 git 커밋이 생긴다. 부원 공간은 `/members`. 자세한 구조·권한·Access 설정은 `docs/wiki-backend.md`.
+게시하면 git 커밋이 생긴다. 개발 문서는 `/members`. 자세한 구조·권한·Access 설정은 `docs/wiki-backend.md`.
 
 개발할 때 로그인 없이 써 보려면 `OFFAIR_DEV_ROLE=lead npm run dev`. 시험 저장이 이 저장소에 커밋되지 않게
 `OFFAIR_GUIDE_REPO=<이 저장소를 clone 한 임시 폴더> OFFAIR_DATA_DIR=<임시 폴더>` 를 함께 준다.
@@ -70,7 +84,7 @@ import 없이 MDX 안에서 사용합니다. 전체 예시는 `content/docs/gett
 ## 구조
 
 ```
-app/                  라우트 (홈, /docs/[...slug], /recent, /members, /contribution)
+app/                  라우트 (홈, /docs/[...slug], /recent, /members, /contribution). 모두 요청마다 권한 확인
 components/shell/     레이아웃 D: 아이콘 레일 · 문서 트리 서랍 · 위 막대 · 화면 설정(테마/서랍/목차)
 components/doc/       문서 화면 (제목 · 메타 · 이전/다음)
 components/mdx/       MDX에 주입되는 컴포넌트 맵
