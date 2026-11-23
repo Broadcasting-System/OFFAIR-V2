@@ -87,7 +87,7 @@ describe("서비스 토큰", () => {
     assert.ok(fs.existsSync(path.join(sb.guide, "content/docs/intro.mdx")));
   });
 
-  test("대리 역할: 부원·졸업생은 부원 공간을 읽고, 교사·손님·모르는 역할은 못 읽는다", async () => {
+  test("대리 역할: 부원·졸업생은 두 공간을 읽고, 교사·손님·모르는 역할은 못 읽는다", async () => {
     const m = await membersDoc();
     const st = async (role: string) => (await h.getDoc(req("GET", "/x", { headers: svc({ role }) }), m)).status;
     assert.equal(await st("member"), 200);
@@ -96,8 +96,16 @@ describe("서비스 토큰", () => {
     assert.equal(await st("teacher"), 403);
     assert.equal(await st("guest"), 401);
     assert.equal(await st("root"), 401, "모르는 역할은 손님");
-    // 공개 문서는 손님 대리도 읽는다
-    assert.equal((await h.getDoc(req("GET", "/x", { headers: svc({ role: "guest" }) }), intro)).status, 200);
+    // 가이드북도 부원 전용: 손님·교사 대리는 못 읽고, 부원·졸업생 대리는 읽는다
+    const gst = async (role: string) => (await h.getDoc(req("GET", "/x", { headers: svc({ role }) }), intro)).status;
+    assert.equal(await gst("guest"), 401);
+    assert.equal(await gst("teacher"), 403);
+    assert.equal(await gst("member"), 200);
+    assert.equal(await gst("alumni"), 200);
+    const g1 = await h.search(req("GET", "/x?q=규칙", { headers: svc({ role: "member" }) }), { space: "guide" });
+    assert.equal(g1.status, 200);
+    assert.ok(((await bodyOf(g1)).results as unknown[]).length > 0);
+    assert.equal((await h.search(req("GET", "/x?q=규칙", { headers: svc({ role: "guest" }) }), { space: "guide" })).status, 401);
     // 부원 공간 검색도 같은 규칙
     const s1 = await h.search(req("GET", "/x?q=방송", { headers: svc({ role: "alumni" }) }), { space: "members" });
     assert.equal(s1.status, 200);
@@ -106,10 +114,13 @@ describe("서비스 토큰", () => {
   });
 });
 
+/** CUE 가 부원 대신 읽는 요청 (가이드북도 부원 전용이라 서비스 토큰 + 부원 역할로) */
+const CUE = () => ({ headers: svc({ role: "member", name: "김부원" }) });
+
 describe("문서 글 (format=text)", () => {
   test("머리말은 따로, 본문은 마크다운, 절대 주소·마지막 수정", async () => {
     process.env.OFFAIR_PUBLIC_URL = "https://offair.bssmcast.com/";
-    const r = await bodyOf(await h.getDoc(req("GET", "/api/wiki/guide/docs/intro?format=text"), intro));
+    const r = await bodyOf(await h.getDoc(req("GET", "/api/wiki/guide/docs/intro?format=text", CUE()), intro));
     assert.equal(r.title, "소개");
     assert.equal(r.description, "첫 문서");
     assert.equal(r.category, "시작하기");
@@ -126,11 +137,11 @@ describe("문서 글 (format=text)", () => {
       doc({ title: "구역", category: "운영", order: 2 }, "## 하나\n\n첫째\n\n### 하나-가\n\n안쪽\n\n## 둘\n\n둘째\n")
     );
     const p = { space: "guide", slug: ["sec"] };
-    const one = await bodyOf(await h.getDoc(req("GET", "/x?format=text&section=" + encodeURIComponent("하나")), p));
+    const one = await bodyOf(await h.getDoc(req("GET", "/x?format=text&section=" + encodeURIComponent("하나"), CUE()), p));
     assert.equal(one.text, "## 하나\n\n첫째\n\n### 하나-가\n\n안쪽\n");
-    const inner = await bodyOf(await h.getDoc(req("GET", "/x?format=text&section=" + encodeURIComponent("하나-가")), p));
+    const inner = await bodyOf(await h.getDoc(req("GET", "/x?format=text&section=" + encodeURIComponent("하나-가"), CUE()), p));
     assert.equal(inner.text, "### 하나-가\n\n안쪽\n");
-    const miss = await h.getDoc(req("GET", "/x?format=text&section=없음"), p);
+    const miss = await h.getDoc(req("GET", "/x?format=text&section=없음", CUE()), p);
     assert.equal(miss.status, 404);
     assert.deepEqual((await bodyOf(miss)).headings, ["하나", "하나-가", "둘"]);
   });
@@ -141,17 +152,17 @@ describe("검색 결과 (CUE 용 필드)", () => {
     for (let i = 0; i < 25; i++) {
       fs.writeFileSync(path.join(sb.guide, `content/docs/m${i}.mdx`), doc({ title: `마이크 ${i}`, category: "운영", order: i + 2 }, "마이크 점검\n"));
     }
-    const r = await bodyOf(await h.search(req("GET", "/x?q=마이크"), { space: "guide" }));
+    const r = await bodyOf(await h.search(req("GET", "/x?q=마이크", CUE()), { space: "guide" }));
     const results = r.results as Record<string, unknown>[];
     assert.equal(results.length, 8);
     const first = results[0];
     for (const k of ["url", "slug", "space", "title", "category", "snippet", "updatedAt"]) assert.ok(k in first, k);
     assert.equal(first.space, "guide");
     assert.match(String(first.url), /^\/docs\//, "OFFAIR_PUBLIC_URL 이 없으면 상대 경로");
-    assert.equal((await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=50"), { space: "guide" }))).results instanceof Array, true);
-    assert.equal(((await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=50"), { space: "guide" }))).results as unknown[]).length, 20);
+    assert.equal((await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=50", CUE()), { space: "guide" }))).results instanceof Array, true);
+    assert.equal(((await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=50", CUE()), { space: "guide" }))).results as unknown[]).length, 20);
     process.env.OFFAIR_PUBLIC_URL = "https://offair.bssmcast.com";
-    const abs = (await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=1"), { space: "guide" }))).results as { url: string; path: string }[];
+    const abs = (await bodyOf(await h.search(req("GET", "/x?q=마이크&limit=1", CUE()), { space: "guide" }))).results as { url: string; path: string }[];
     assert.equal(abs.length, 1);
     assert.match(abs[0].url, /^https:\/\/offair\.bssmcast\.com\/docs\//);
     assert.match(abs[0].path, /^\/docs\//);

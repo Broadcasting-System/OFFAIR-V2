@@ -1,31 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LockIcon } from "@/components/shell/icons";
 import { PageBar } from "@/components/shell/page-bar";
 import { SiteFooter } from "@/components/site-footer";
-import { MembersBand } from "@/components/members/band";
-import { LoginWall } from "@/components/members/login-wall";
+import { readGate } from "@/components/members/read-gate";
 import { EmptySpace } from "@/components/space/empty-space";
 import { getNav, spaceOf } from "@/lib/content";
 import { formatDate, getRecentDocs } from "@/lib/doc-info";
-import { pageAccess } from "@/lib/wiki/server-viewer";
+import { SPACE_LABEL } from "@/lib/wiki/links";
 
 /**
- * 부원 공간 첫 화면 (/members). 요청마다 권한을 확인해서 그린다 — 정적 생성하지 않는다.
- * 손님에게는 로그인 벽만 보이고 부원 문서는 HTML 에 한 글자도 들어가지 않는다.
+ * 개발 문서 첫 화면 (/members, 내부 id 는 members 그대로). 요청마다 권한을 확인해서 그린다.
+ * 손님에게는 로그인 벽만 보이고 문서는 HTML 에 한 글자도 들어가지 않는다.
  */
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "부원 공간",
+  title: SPACE_LABEL.members,
   robots: { index: false, follow: false },
 };
 
 const PER_CATEGORY = 5;
 
 export default async function MembersHome() {
-  const { viewer, canReadMembers } = await pageAccess();
-  if (!canReadMembers) return <LoginWall next="/members" mode={viewer.authenticated ? "forbidden" : "login"} />;
+  const wall = await readGate("/members");
+  if (wall) return wall;
 
   const space = spaceOf("members");
   const nav = getNav("members");
@@ -34,24 +32,16 @@ export default async function MembersHome() {
 
   return (
     <>
-      <MembersBand />
-      <PageBar crumbs={[{ label: "부원 공간" }]} />
+      <PageBar crumbs={[{ label: SPACE_LABEL.members }]} />
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         <div className="mx-auto w-full max-w-[960px] px-4 pt-6 pb-20 sm:px-8 sm:pt-10">
           <section className="max-w-[640px]">
-            <p className="inline-flex items-center gap-1.5 text-[13px] font-bold tracking-[0.06em] text-lock">
-              <LockIcon size={14} />
-              부원만
-            </p>
-            <h1 className="mt-2 text-[30px] leading-tight font-bold tracking-[-0.01em] text-fg sm:text-[36px]">부원 공간</h1>
-            <p className="mt-3 text-[16px] leading-relaxed text-fg-2 sm:text-[17px]">
-              방송부 부원끼리 보는 운영 문서예요. 서버 PC·장비 절차, 인수인계, 회의 기록처럼 공개 가이드북에 올리지 않을 것을 여기에 써요.
-            </p>
+            <h1 className="text-[30px] leading-tight font-bold tracking-[-0.01em] text-fg sm:text-[36px]">{SPACE_LABEL.members}</h1>
           </section>
 
           {!space ? (
             <p className="mt-10 rounded-xl border border-line bg-bg-soft px-5 py-6 text-[14px] text-fg-2">
-              서버 설정 문제로 부원 공간을 열 수 없어요. 관리자에게 알려 주세요 (OFFAIR_DATA_DIR 위치).
+              개발 문서를 열 수 없어요. 관리자에게 알려 주세요.
             </p>
           ) : nav.length === 0 ? (
             <EmptySpace categories={categories} />

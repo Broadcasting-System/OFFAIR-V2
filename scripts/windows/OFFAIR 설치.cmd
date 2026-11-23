@@ -7,6 +7,7 @@ exit /b
 # OFFAIR 설치 — 방송실 서버 PC 에 위키(offair.bssmcast.com)를 처음 올리거나 새 main 으로 바꿀 때 실행
 # 1) 온에어\OFFAIR-V2 에 GitHub main 을 받고 npm ci → next build
 # 2) 'OFFAIR Autostart' 작업(로그온 40초 뒤 'OFFAIR 시작.cmd')을 만들고 지금 켠다 (포트 3020, 127.0.0.1 만)
+#    켤 때 ONAIR-SERVER\docs\offair-dev(개발 문서 씨앗)가 있으면 'OFFAIR 시작.cmd' 가 위키로 먼저 가져온다
 # 3) 종·실시간 마이크·녹음 중이 아닐 때까지 기다린 뒤:
 #    - 터널 설정(onair-cloudflared\config.yml)에 offair.bssmcast.com → 127.0.0.1:3020 을 넣고 터널만 다시 켠다
 #    - ONAIR-SERVER\.env 의 CF_ACCESS_AUD 에 위키 Access 앱 AUD 를 덧붙이고 서버(8000)만 다시 켠다

@@ -6,17 +6,17 @@ import { isLoopback, peerOf } from "./peer";
 /**
  * 누가 요청했는지 — ONAIR 서버에 물어본다.
  *
- * Cloudflare Access 가 편집·부원 경로 앞에서 로그인시키고 `Cf-Access-Jwt-Assertion` 머리글을 붙인다.
- * (머리글이 없으면 Access 쿠키 `CF_Authorization` 을 쓴다 — 공개 경로에서도 로그인한 사람을 알아보려고)
+ * Cloudflare Access 가 `/login` 에서 로그인시키고 `Cf-Access-Jwt-Assertion` 머리글을 붙인다.
+ * (머리글이 없으면 Access 쿠키 `CF_Authorization` 을 쓴다. Access 가 덮지 않은 경로에서도 로그인한 사람을 알아보려고)
  * 그 토큰을 같은 PC 의 ONAIR `GET /api/members/me` 로 그대로 넘기면 ONAIR 가 서명·AUD 를 확인하고
  * 역할을 돌려준다. 토큰이 없으면 ONAIR 를 부르지 않는다 — 토큰 없이 127.0.0.1 에서 부르면
  * ONAIR 가 "서버 자신"으로 볼 수 있기 때문이다.
  *
  * 규칙
- * - guide 읽기: 누구나
- * - members 읽기: member·lead·superadmin, 그리고 alumni(읽기만)
+ * - 읽기(가이드북 guide · 개발 문서 members 모두): member·lead·superadmin, 그리고 alumni(읽기만).
+ *   손님·교사·미등록은 어느 공간도 못 읽는다 (2026-11 부장 결정: 두 공간 모두 부원 전용)
  * - 모든 쓰기(저장·만들기·삭제·이동·업로드·댓글·되돌리기): member 이상
- * - 댓글 보기: 부원 공간을 읽을 수 있는 사람 / 남의 댓글 지우기: lead 이상
+ * - 댓글 보기: 문서를 읽을 수 있는 사람 / 남의 댓글 지우기: lead 이상
  */
 
 export const ROLES = ["superadmin", "lead", "member", "alumni", "teacher", "guest"] as const;
@@ -52,8 +52,9 @@ export function canEdit(v: Viewer): boolean {
 export function canReadMembers(v: Viewer): boolean {
   return MEMBER_READ_ROLES.includes(v.role);
 }
+/** 두 공간 모두 같은 규칙 — 부원(졸업생 포함)만 읽는다 */
 export function canReadSpace(v: Viewer, space: SpaceId): boolean {
-  return space === "guide" ? true : canReadMembers(v);
+  return (space === "guide" || space === "members") && canReadMembers(v);
 }
 export function canReadComments(v: Viewer): boolean {
   return canReadMembers(v);
@@ -160,7 +161,7 @@ function sameSecret(a: string, b: string): boolean {
  *  - 토큰이 틀림·소켓이 127.0.0.1/::1 이 아님·Cloudflare 를 거쳐 옴 → 403
  *  - GET/HEAD 가 아니면 403 (읽기 전용)
  *  - 통과하면 `X-Offair-As-Role`(모르는 값은 guest)·`X-Offair-As-Name`(URL 인코딩) 사람으로 본다.
- *    그 뒤 권한은 보통 규칙 그대로 (부원 공간은 그 역할이 읽을 수 있을 때만).
+ *    그 뒤 권한은 보통 규칙 그대로 (두 공간 모두 그 역할이 부원 이상·졸업생일 때만 읽힌다).
  */
 export function serviceViewer(req: Request): Viewer | undefined {
   const sent = req.headers.get(SERVICE_HEADER);
@@ -193,7 +194,7 @@ export function serviceViewer(req: Request): Viewer | undefined {
   };
 }
 
-/** 요청자. ONAIR 가 안 되면 손님으로 본다 (공개 문서는 계속 보이게) */
+/** 요청자. ONAIR 가 안 되면 손님으로 본다 (그러면 로그인 벽만 보인다) */
 export async function getViewer(req: Request): Promise<Viewer> {
   const service = serviceViewer(req);
   if (service) return service;

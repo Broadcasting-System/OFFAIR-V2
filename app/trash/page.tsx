@@ -2,14 +2,19 @@ import type { Metadata } from "next";
 import { TrashList } from "@/components/manage/trash-list";
 import { PageBar } from "@/components/shell/page-bar";
 import { SiteFooter } from "@/components/site-footer";
+import { readGate } from "@/components/members/read-gate";
 
 export const metadata: Metadata = {
   title: "휴지통",
   robots: { index: false },
 };
 
-/** 휴지통 — 지운 문서를 공간별로 모아 되살린다. 목록은 브라우저에서 API 로 받는다. */
-export default function TrashPage() {
+export const dynamic = "force-dynamic";
+
+/** 휴지통: 지운 문서를 공간별로 모아 되살린다. 목록은 브라우저에서 API 로 받는다. 부원 전용 */
+export default async function TrashPage() {
+  const wall = await readGate("/trash");
+  if (wall) return wall;
   return (
     <>
       <PageBar crumbs={[{ label: "가이드북", href: "/" }, { label: "휴지통" }]} />

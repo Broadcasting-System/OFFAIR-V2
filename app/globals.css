@@ -964,48 +964,67 @@ html[data-cmt-margin="on"] .toc-pop {
   pointer-events: auto;
 }
 
-/* =========================== 부원 공간 (시안 f8) =========================== */
-.members-band {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 22px;
-  background: var(--lock-bg);
-  color: var(--lock);
-  border-bottom: 1px solid var(--lock-line);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-@media (max-width: 768px) {
-  .members-band {
-    padding: 0 16px;
-  }
-}
-
-/* 로그인 벽 — 본문 칼럼 전체를 덮는 옅은 바탕 위 가운데 카드 */
+/* =========================== 로그인 벽 (시안 C · 방송 대기 화면) =========================== */
+/* 송출이 꺼진 방송 화면: 속이 빈 OFF AIR, 한 줄, 단추 하나, 맨 아래 컬러바. 카드·아이콘 없이 본문 칼럼 전체 */
 .login-wall {
+  position: relative;
   flex: 1;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 100dvh;
-  padding: 24px 16px;
-  background: var(--bg-soft);
+  padding: 72px 16px;
+  text-align: center;
+  background: var(--bg);
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 @media (max-width: 768px) {
   .login-wall {
     min-height: calc(100dvh - 52px);
   }
 }
-.login-wall-card {
-  width: min(440px, 100%);
-  padding: 30px 30px 24px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(9, 30, 66, 0.08);
+.login-wall-id {
+  position: absolute;
+  top: 26px;
+  left: 30px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: var(--fg-3);
+}
+.login-wall-big {
+  margin: 0 0 30px;
+  font-weight: 900;
+  font-size: clamp(36px, 10vw, 150px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--fg-3);
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .login-wall-big {
+    -webkit-text-stroke-width: 1.5px;
+  }
+  .login-wall-id {
+    top: 20px;
+    left: 20px;
+  }
+}
+.login-wall-bars {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  display: flex;
+  opacity: 0.55;
+}
+.login-wall-bars i {
+  flex: 1;
 }
 
 /* 서랍 맨 위 공간 탭의 고른 칸 — 라이트는 흰 칸이 떠 있게, 다크는 한 단 밝은 칸 */

@@ -134,7 +134,7 @@ export function activity(req: Request): Promise<Response> {
     const v = await getViewer(req);
     if (!v.authenticated) throw unauthorized();
     const store = getStore();
-    const ids: SpaceId[] = canReadSpace(v, "members") && store.members ? ["guide", "members"] : ["guide"];
+    const ids = (["guide", "members"] as SpaceId[]).filter((id) => canReadSpace(v, id) && (id === "guide" || store.members));
     const mentions = [];
     const edits = [];
     for (const id of ids) {
@@ -475,25 +475,28 @@ function fileResponse(f: { bytes: Buffer; type: string; name: string }, cacheCon
   return new Response(new Uint8Array(f.bytes), { headers });
 }
 
-/** /api/wiki/<space>/files/<yyyy-mm>/<name> — 부원 파일은 권한 확인 뒤에만 */
+/** /api/wiki/<space>/files/<yyyy-mm>/<name> — 두 공간 모두 권한 확인 뒤에만 */
 export function file(req: Request, p: FileParams): Promise<Response> {
   return handle(req, async () => {
-    const { space, id } = await gate(req, p, "read");
+    const { space } = await gate(req, p, "read");
     const f = readUpload(space, Array.isArray(p.path) ? p.path : []);
     if (!f) throw notFound("파일이 없습니다.");
-    return fileResponse(f, id === "guide" ? "public, max-age=3600" : "private, max-age=300");
+    return fileResponse(f, "private, max-age=300");
   });
 }
 
 /**
- * /uploads/<…> — 서버가 켜진 뒤 올라온 공개 파일.
+ * /uploads/<…> — 서버가 켜진 뒤 올라온 가이드북 업로드 (public/uploads).
  * (next start 는 시작할 때 있던 public/ 파일만 정적으로 내준다. 그 뒤에 올린 것은 여기로 온다)
+ * 이 대체 경로는 가이드북 읽기 권한을 확인한다. 다만 빌드·시작 때 이미 있던 public/uploads 파일은
+ * Next 가 정적으로 바로 내주므로 주소를 알면 누구나 받을 수 있다 (docs/wiki-backend.md "업로드 노출").
  */
 export function publicUpload(req: Request, p: { path: string[] }): Promise<Response> {
   return handle(req, async () => {
-    const f = readUpload(getSpace("guide"), Array.isArray(p.path) ? p.path : []);
+    const { space } = await gate(req, { space: "guide" }, "read");
+    const f = readUpload(space, Array.isArray(p.path) ? p.path : []);
     if (!f) throw notFound("파일이 없습니다.");
-    return fileResponse(f, "public, max-age=3600");
+    return fileResponse(f, "private, max-age=300");
   });
 }
 
@@ -550,12 +553,12 @@ export function deleteComment(req: Request, p: SlugParams): Promise<Response> {
   });
 }
 
-/* ───────────────────────── 공개 저장소 동기화 ───────────────────────── */
+/* ───────────────────────── 가이드북 저장소 동기화 (GitHub push) ───────────────────────── */
 
 export function syncStatus(req: Request, p: SpaceParams): Promise<Response> {
   return handle(req, async () => {
     const { id } = await gate(req, p, "edit");
-    if (id !== "guide") throw notFound("부원 공간은 어디에도 올리지 않습니다.");
+    if (id !== "guide") throw notFound("개발 문서는 어디에도 올리지 않습니다.");
     return json(getStore().pusher.status());
   });
 }
@@ -563,7 +566,7 @@ export function syncStatus(req: Request, p: SpaceParams): Promise<Response> {
 export function syncNow(req: Request, p: SpaceParams): Promise<Response> {
   return handle(req, async () => {
     const { id } = await gate(req, p, "moderate");
-    if (id !== "guide") throw notFound("부원 공간은 어디에도 올리지 않습니다.");
+    if (id !== "guide") throw notFound("개발 문서는 어디에도 올리지 않습니다.");
     return json(await getStore().pusher.pushNow());
   });
 }

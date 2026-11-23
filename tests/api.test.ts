@@ -19,10 +19,12 @@ const intro = { space: "guide", slug: ["intro"] };
 
 describe("문서 API", () => {
   test("GET → PUT(baseRev) → 같은 baseRev 로 다시 PUT 하면 409", async () => {
-    const got = await bodyOf(await h.getDoc(req("GET", "/api/wiki/guide/docs/intro"), intro));
+    // 가이드북도 부원 전용: 손님은 401, 졸업생(읽기만)은 읽는다
+    assert.equal((await h.getDoc(req("GET", "/api/wiki/guide/docs/intro"), intro)).status, 401);
+    const got = await bodyOf(await h.getDoc(req("GET", "/api/wiki/guide/docs/intro", { token: "tok-alumni" }), intro));
     assert.equal(got.title, "소개");
     assert.equal((got.lastCommit as { author: string }).author, "seed");
-    assert.equal(got.commentCount, undefined, "손님에게는 댓글 수도 안 보임");
+    assert.equal(got.commentCount, 0, "읽을 수 있는 사람에게는 댓글 수");
 
     const put = await h.saveDoc(
       req("PUT", "/api/wiki/guide/docs/intro", { token: "tok-member", body: { baseRev: got.rev, body: "\n새 본문\n" } }),
@@ -45,10 +47,12 @@ describe("문서 API", () => {
   test("baseRev 없는 PUT 은 400, 없는 문서 404, 나쁜 경로 400, 없는 공간 404", async () => {
     const t = { token: "tok-member" };
     assert.equal((await h.saveDoc(req("PUT", "/x", { ...t, body: { body: "x" } }), intro)).status, 400);
-    assert.equal((await h.getDoc(req("GET", "/x"), { space: "guide", slug: ["nope"] })).status, 404);
-    assert.equal((await h.getDoc(req("GET", "/x"), { space: "guide", slug: ["..", "etc"] })).status, 400);
-    assert.equal((await h.getDoc(req("GET", "/x"), { space: "guide", slug: ["%2e%2e", "x"] })).status, 400);
-    assert.equal((await h.tree(req("GET", "/x"), { space: "secret" })).status, 404);
+    assert.equal((await h.getDoc(req("GET", "/x", t), { space: "guide", slug: ["nope"] })).status, 404);
+    assert.equal((await h.getDoc(req("GET", "/x", t), { space: "guide", slug: ["..", "etc"] })).status, 400);
+    assert.equal((await h.getDoc(req("GET", "/x", t), { space: "guide", slug: ["%2e%2e", "x"] })).status, 400);
+    assert.equal((await h.tree(req("GET", "/x", t), { space: "secret" })).status, 404);
+    // 손님에게는 문서가 있든 없든 같은 401
+    assert.equal((await h.getDoc(req("GET", "/x"), { space: "guide", slug: ["nope"] })).status, 401);
   });
 
   test("다른 사이트 Origin 의 쓰기 요청은 403", async () => {
@@ -91,20 +95,20 @@ describe("문서 API", () => {
 
     const sidebar = await h.patchSidebar(req("PATCH", "/x", { token: t, body: { action: "add", name: "장비" } }), G);
     assert.equal(sidebar.status, 200);
-    const sb2 = await bodyOf(await h.getSidebar(req("GET", "/x"), G));
+    const sb2 = await bodyOf(await h.getSidebar(req("GET", "/x", { token: t }), G));
     assert.ok((sb2.categories as string[]).includes("장비"));
 
     const p = { space: "guide", slug: ["ops", "rules"] };
-    const hist = await bodyOf(await h.history(req("GET", "/x"), p));
+    const hist = await bodyOf(await h.history(req("GET", "/x", { token: t }), p));
     const entries = hist.entries as { rev: string; status: string }[];
     assert.ok(entries.length >= 2);
     const first = entries[entries.length - 1].rev;
-    const df = await bodyOf(await h.diff(req("GET", `/x?from=${first}`), p));
+    const df = await bodyOf(await h.diff(req("GET", `/x?from=${first}`, { token: t }), p));
     assert.ok(Array.isArray(df.lines));
-    const rv = await h.revision(req("GET", `/x?rev=${first}`), p);
+    const rv = await h.revision(req("GET", `/x?rev=${first}`, { token: t }), p);
     assert.equal(rv.status, 200);
     assert.equal((await bodyOf(rv)).title, "규칙");
-    const bad = await h.revision(req("GET", "/x?rev=--output=x"), p);
+    const bad = await h.revision(req("GET", "/x?rev=--output=x", { token: t }), p);
     assert.equal(bad.status, 400);
 
     const back = await h.revert(req("POST", "/x", { token: t, body: { rev: first } }), p);
@@ -112,11 +116,12 @@ describe("문서 API", () => {
   });
 
   test("검색: 본문 평문으로 찾고 스니펫", async () => {
-    const r = await bodyOf(await h.search(req("GET", "/api/wiki/guide/search?q=마이크"), G));
+    const t = { token: "tok-member" };
+    const r = await bodyOf(await h.search(req("GET", "/api/wiki/guide/search?q=마이크", t), G));
     const results = r.results as { title: string; snippet: string }[];
     assert.equal(results[0].title, "규칙");
     assert.match(results[0].snippet, /마이크/);
-    const all = await bodyOf(await h.search(req("GET", "/api/wiki/guide/search"), G));
+    const all = await bodyOf(await h.search(req("GET", "/api/wiki/guide/search", t), G));
     assert.equal((all.docs as unknown[]).length, 2);
   });
 });
@@ -144,14 +149,21 @@ describe("업로드·파일", () => {
     assert.equal(escape.status, 400);
   });
 
-  test("공개 업로드는 /uploads/ 대체 경로로도 받을 수 있다", async () => {
+  test("가이드북 업로드는 /uploads/ 대체 경로로도 받지만, 부원만", async () => {
     const form = new FormData();
     form.set("file", new File([PNG_1PX], "a.png"));
     const info = await bodyOf(await h.upload(req("POST", "/x", { token: "tok-member", form }), G));
     const parts = String(info.url).replace("/uploads/", "").split("/");
-    const res = await h.publicUpload(req("GET", String(info.url)), { path: parts });
+    assert.equal((await h.publicUpload(req("GET", String(info.url)), { path: parts })).status, 401);
+    assert.equal((await h.publicUpload(req("GET", String(info.url), { token: "tok-teacher" }), { path: parts })).status, 403);
+    const res = await h.publicUpload(req("GET", String(info.url), { token: "tok-alumni" }), { path: parts });
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+    assert.match(res.headers.get("cache-control")!, /private/);
+    // 같은 파일을 /api/wiki/guide/files 로 받을 때도 같은 규칙
+    const fp = { space: "guide", path: parts };
+    assert.equal((await h.file(req("GET", "/x"), fp)).status, 401);
+    assert.equal((await h.file(req("GET", "/x", { token: "tok-member" }), fp)).status, 200);
   });
 
   test("파일 없음·형식 거부", async () => {

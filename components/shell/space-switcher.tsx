@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { BookIcon, LockIcon } from "./icons";
-import { SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
+import { BookIcon, CodeIcon } from "./icons";
+import { SPACE_LABEL, spaceHome, type SpaceKey } from "@/lib/wiki/links";
 
 /**
- * 서랍 맨 위 공간 탭 (시안 g2-B). 가이드북(공개) · 부원 공간(부원만) 두 칸을 늘 보여 주고
- * 한 번 눌러 옮긴다. 부원 공간은 /members — 손님이면 그곳에서 로그인 벽이 나온다.
+ * 서랍 맨 위 공간 탭 (시안 g2-B). 가이드북 · 개발 문서 두 칸을 늘 보여 주고 한 번 눌러 옮긴다.
+ * 두 공간 모두 부원 전용이라 손님은 어느 쪽을 눌러도 로그인 벽을 본다.
  */
 export function SpaceSwitcher({ space }: { space: SpaceKey }) {
   return (
@@ -19,15 +19,13 @@ export function SpaceSwitcher({ space }: { space: SpaceKey }) {
         return (
           <Link
             key={s}
-            href={s === "guide" ? "/" : "/members"}
+            href={spaceHome(s)}
             aria-current={on ? "page" : undefined}
             className={`flex h-[30px] min-w-0 items-center justify-center gap-1.5 rounded-[7px] text-[13px] font-semibold transition-colors ${
-              on
-                ? `seg-on ${s === "members" ? "text-lock" : "text-fg"}`
-                : "text-fg-3 hover:bg-hover hover:text-fg-2"
+              on ? "seg-on text-fg" : "text-fg-3 hover:bg-hover hover:text-fg-2"
             }`}
           >
-            {s === "guide" ? <BookIcon size={15} /> : <LockIcon size={14} />}
+            {s === "guide" ? <BookIcon size={15} /> : <CodeIcon size={15} />}
             <span className="truncate">{SPACE_LABEL[s]}</span>
           </Link>
         );
@@ -36,7 +34,7 @@ export function SpaceSwitcher({ space }: { space: SpaceKey }) {
   );
 }
 
-/** 탭 아래 한 줄: "공개 · 문서 29" */
-export function spaceSub(space: SpaceKey, count: number | null) {
-  return `${space === "guide" ? "공개" : "부원만"}${count !== null ? ` · 문서 ${count}` : ""}`;
+/** 탭 아래 한 줄: "문서 29" (모르면 빈 줄) */
+export function spaceSub(count: number | null) {
+  return count !== null ? `문서 ${count}` : "";
 }

@@ -81,7 +81,9 @@ describe("권한 표", () => {
   const ROLES = ["anon", "tok-guest", "tok-teacher", "tok-alumni", "tok-member", "tok-lead", "tok-superadmin"] as const;
   type R = (typeof ROLES)[number];
   const expect: Record<string, Record<R, number>> = {
-    "guide 읽기": { anon: 200, "tok-guest": 200, "tok-teacher": 200, "tok-alumni": 200, "tok-member": 200, "tok-lead": 200, "tok-superadmin": 200 },
+    "guide 읽기": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 200, "tok-member": 200, "tok-lead": 200, "tok-superadmin": 200 },
+    "guide 트리": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 200, "tok-member": 200, "tok-lead": 200, "tok-superadmin": 200 },
+    "guide 검색": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 200, "tok-member": 200, "tok-lead": 200, "tok-superadmin": 200 },
     "members 읽기": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 200, "tok-member": 200, "tok-lead": 200, "tok-superadmin": 200 },
     "guide 쓰기": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 403, "tok-member": 201, "tok-lead": 201, "tok-superadmin": 201 },
     "members 쓰기": { anon: 401, "tok-guest": 403, "tok-teacher": 403, "tok-alumni": 403, "tok-member": 201, "tok-lead": 201, "tok-superadmin": 201 },
@@ -93,6 +95,8 @@ describe("권한 표", () => {
   let n = 0;
   const actions: Record<string, (token?: string) => Promise<Response>> = {
     "guide 읽기": (t) => h.getDoc(req("GET", "/api/wiki/guide/docs/intro", { token: t }), { space: "guide", slug: ["intro"] }),
+    "guide 트리": (t) => h.tree(req("GET", "/api/wiki/guide/tree", { token: t }), { space: "guide" }),
+    "guide 검색": (t) => h.search(req("GET", "/api/wiki/guide/search?q=규칙", { token: t }), { space: "guide" }),
     "members 읽기": (t) => h.tree(req("GET", "/api/wiki/members/tree", { token: t }), { space: "members" }),
     "guide 쓰기": (t) =>
       h.createDoc(req("POST", "/api/wiki/guide/docs", { token: t, body: { title: `공개 ${n++}` } }), { space: "guide" }),
@@ -137,5 +141,47 @@ describe("권한 표", () => {
     const ok = await h.search(req("GET", "/api/wiki/members/search?q=비밀번호", { token: "tok-alumni" }), { space: "members" });
     assert.equal(ok.status, 200);
     assert.match(await ok.text(), /1234/);
+  });
+
+  test("가이드북도 권한 없는 사람(손님·미등록·교사·승인 대기)에게는 내용도 존재 여부도 안 보인다", async () => {
+    const sha = sb.git(["rev-parse", "HEAD"]).trim();
+    const G = { space: "guide" };
+    const intro = { space: "guide", slug: ["intro"] };
+    for (const t of [undefined, "tok-guest", "tok-teacher", "tok-pending"]) {
+      const calls: [string, () => Promise<Response>][] = [
+        ["tree", () => h.tree(req("GET", "/api/wiki/guide/tree", { token: t }), G)],
+        ["search", () => h.search(req("GET", "/api/wiki/guide/search?q=규칙", { token: t }), G)],
+        ["index", () => h.search(req("GET", "/api/wiki/guide/search", { token: t }), G)],
+        ["doc", () => h.getDoc(req("GET", "/api/wiki/guide/docs/intro", { token: t }), intro)],
+        ["text", () => h.getDoc(req("GET", "/api/wiki/guide/docs/intro?format=text", { token: t }), intro)],
+        ["missing", () => h.getDoc(req("GET", "/api/wiki/guide/docs/없음", { token: t }), { space: "guide", slug: ["없음"] })],
+        ["sidebar", () => h.getSidebar(req("GET", "/x", { token: t }), G)],
+        ["history", () => h.history(req("GET", "/x", { token: t }), intro)],
+        ["revision", () => h.revision(req("GET", `/x?rev=${sha}`, { token: t }), intro)],
+        ["diff", () => h.diff(req("GET", "/x?from=empty", { token: t }), intro)],
+        ["trash", () => h.trash(req("GET", "/x", { token: t }), G)],
+        ["uploads", () => h.uploads(req("GET", "/x", { token: t }), G)],
+        ["comments", () => h.listComments(req("GET", "/x", { token: t }), intro)],
+      ];
+      for (const [name, call] of calls) {
+        const res = await call();
+        const text = await res.text();
+        assert.ok(res.status === 401 || res.status === 403, `${name}/${t}: ${res.status}`);
+        assert.equal(res.status, t === undefined ? 401 : 403, `${name}/${t}`);
+        assert.ok(!text.includes("방송부 가이드") && !text.includes("소개") && !text.includes("규칙 본문"), `${name}/${t} 내용 노출`);
+      }
+    }
+    // 졸업생은 읽는다
+    const ok = await h.getDoc(req("GET", "/api/wiki/guide/docs/intro", { token: "tok-alumni" }), intro);
+    assert.equal(ok.status, 200);
+    assert.match(await ok.text(), /방송부 가이드/);
+  });
+
+  test("내 메뉴(activity)는 읽을 수 있는 공간만, 교사는 아무 공간도 없다", async () => {
+    await h.createDoc(req("POST", "/x", { token: "tok-member", body: { title: "고친 문서" } }), { space: "guide" });
+    const m = await bodyOf(await h.activity(req("GET", "/api/me/activity", { token: "tok-member" })));
+    assert.ok((m.edits as { space: string }[]).some((e) => e.space === "guide"));
+    const teacher = await bodyOf(await h.activity(req("GET", "/api/me/activity", { token: "tok-teacher" })));
+    assert.deepEqual([teacher.mentions, teacher.edits], [[], []]);
   });
 });

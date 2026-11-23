@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { NavGroup, SearchDoc } from "@/lib/content";
 import { Logo } from "@/components/logo";
 import { OffairMark } from "@/components/offair-mark";
 import { CommandPalette } from "@/components/search/command-palette";
@@ -11,13 +10,13 @@ import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
 import { treeSpace, useTree } from "@/components/manage/tree-ops";
 import { Toaster } from "@/components/ui/toast";
 import { canEditNow, useMe } from "@/lib/wiki/client";
-import { loginHref, type SpaceKey } from "@/lib/wiki/links";
+import { SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
 import { SpaceSwitcher, spaceSub } from "./space-switcher";
 import { UserMenu } from "./user-menu";
 import {
   ClockIcon,
   CloseIcon,
-  LockIcon,
+  CodeIcon,
   MenuIcon,
   MoonIcon,
   SearchIcon,
@@ -37,32 +36,22 @@ import {
  * 레이아웃 D(집중 읽기형)의 뼈대.
  *  - 데스크톱: 왼쪽 아이콘 레일(56px) + 문서 트리 서랍(280px) + 본문
  *  - 모바일(≤768px): 레일 대신 얇은 위 막대, 서랍은 왼쪽 시트
+ *
+ * 두 공간(가이드북·개발 문서) 모두 부원 전용이라 이 뼈대(루트 레이아웃)에는 문서 목록을 넣지 않는다.
+ * 트리·검색은 브라우저가 권한을 확인하는 API(/api/wiki/<space>/tree·search)로 받는다.
  */
-export function AppShell({
-  nav,
-  searchIndex,
-  children,
-}: {
-  nav: NavGroup[];
-  searchIndex: SearchDoc[];
-  children: React.ReactNode;
-}) {
+export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const drawerOpen = usePanelOpen("drawer");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const me = useMe();
   const editable = canEditNow(me);
-  // 지금 공간 — 부원 공간 화면(/members…)과 그 문서 편집(/write/members/…)이면 부원 공간
+  // 지금 공간: 개발 문서 화면(/members…)과 그 문서 편집(/write/members/…)이면 개발 문서
   const space: SpaceKey = /^\/(members|write\/members)(\/|$)/.test(pathname) ? "members" : "guide";
-  const canSeeSpace = space === "guide" || !!me?.canReadMembers;
+  const canSeeSpace = !!me?.canReadMembers;
   const { groups } = useTree();
-  const docCount =
-    space === "guide"
-      ? nav.reduce((n, g) => n + g.items.length, 0)
-      : treeSpace() === "members" && groups
-        ? groups.reduce((n, g) => n + g.items.length, 0)
-        : null;
+  const docCount = canSeeSpace && treeSpace() === space && groups ? groups.reduce((n, g) => n + g.items.length, 0) : null;
 
   // 페이지가 바뀌면 모바일 시트는 닫는다 (렌더 중 상태 조정 패턴)
   const [lastPath, setLastPath] = useState(pathname);
@@ -149,11 +138,10 @@ export function AppShell({
             </RailLink>
             <RailLink
               href="/members"
-              label="부원 공간 (부원만)"
+              label={SPACE_LABEL.members}
               active={membersActive}
-              tone="lock"
             >
-              <LockIcon />
+              <CodeIcon />
             </RailLink>
             <span className="flex-1" />
             <ThemeButton className="rail-tip" />
@@ -207,23 +195,12 @@ export function AppShell({
                 </button>
               </div>
               <div className="flex h-9 items-center pr-0.5 pl-1.5">
-                <span className="min-w-0 flex-1 truncate text-[12px] text-fg-3">{spaceSub(space, docCount)}</span>
+                <span className="min-w-0 flex-1 truncate text-[12px] text-fg-3">{spaceSub(docCount)}</span>
                 {canSeeSpace && <NewDocButton />}
               </div>
             </div>
-            {canSeeSpace ? (
-              <ManagedTree nav={nav} space={space} onNavigate={() => setSheetOpen(false)} />
-            ) : (
-              <div className="mx-2 mt-2 rounded-lg border border-dashed border-lock-line bg-lock-bg px-3 py-4 text-center text-[13px] text-lock">
-                <LockIcon size={18} className="mx-auto mb-1.5" />
-                로그인한 부원만 볼 수 있어요
-                {me && !me.authenticated && (
-                  <a href={loginHref(pathname)} className="mx-auto mt-2.5 flex h-7 w-fit items-center rounded-md bg-lock px-3 text-[12.5px] font-semibold text-lock-fg">
-                    로그인
-                  </a>
-                )}
-              </div>
-            )}
+            {/* 손님에게는 트리 자리를 비운다. 로그인은 본문의 OFF AIR 화면에서 (components/members/login-wall.tsx) */}
+            {canSeeSpace && <ManagedTree space={space} onNavigate={() => setSheetOpen(false)} />}
             {editable && (
               <div className="mt-6 border-t border-line-2 px-2 pt-3 text-[13px]">
                 <Link
@@ -252,7 +229,6 @@ export function AppShell({
       </div>
 
       <CommandPalette
-        index={searchIndex}
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
       />
@@ -295,14 +271,11 @@ function RailLink({
   href,
   label,
   active,
-  tone = "accent",
   children,
 }: {
   href: string;
   label: string;
   active: boolean;
-  /** 켜졌을 때 색 — 부원 공간은 보라(lock) */
-  tone?: "accent" | "lock";
   children: React.ReactNode;
 }) {
   return (
@@ -312,7 +285,7 @@ function RailLink({
       data-tip={label}
       aria-current={active ? "page" : undefined}
       className={`${railBtn} ${
-        active ? (tone === "lock" ? "bg-lock-bg text-lock" : "bg-sel text-accent") : "text-fg-2 hover:bg-hover"
+        active ? "bg-sel text-accent" : "text-fg-2 hover:bg-hover"
       }`}
     >
       {children}

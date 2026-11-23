@@ -126,7 +126,7 @@ export function getSpace(id: SpaceId): Space {
   const store = getStore();
   if (id === "guide") return store.guide;
   if (!store.members) {
-    throw new StoreError("unavailable", store.membersProblem ?? "부원 공간을 쓸 수 없습니다.");
+    throw new StoreError("unavailable", store.membersProblem ?? "개발 문서를 쓸 수 없습니다.");
   }
   return store.members;
 }
