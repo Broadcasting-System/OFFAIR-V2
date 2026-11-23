@@ -37,6 +37,20 @@ function Api([string]$path) {
 function Test-Port([int]$p) {
   return [bool](Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue)
 }
+# 켜져 있는 위키를 끈다 — 위키(next start)가 node_modules 의 .node 파일을 잡고 있어서
+# 끄지 않으면 npm ci 가 EPERM(unlink) 으로 실패한다. 업데이트 동안 위키는 몇 분 꺼진다.
+function Stop-Wiki {
+  if (-not (Test-Port $port)) { return }
+  Say "켜져 있는 위키를 잠깐 꺼요 (포트 $port)" Gray
+  Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -and $_.CommandLine.Contains("WindowTitle = 'OFFAIR 위키 ($port)'") } |
+    ForEach-Object { taskkill /PID $_.ProcessId /T /F 2>&1 | Out-Null }
+  Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+    ForEach-Object { taskkill /PID $_.OwningProcess /T /F 2>&1 | Out-Null }
+  $until = (Get-Date).AddSeconds(15)
+  while ((Test-Port $port) -and (Get-Date) -lt $until) { Start-Sleep 1 }
+  Start-Sleep 2
+}
 
 Write-Host ''
 Write-Host '  OFFAIR 설치' -ForegroundColor White
@@ -99,6 +113,7 @@ if (-not (Test-Path (Join-Path $app '.git'))) {
 }
 Say ('받음: ' + (git -C $app log -1 --format='%h %s')) Green
 
+Stop-Wiki
 Push-Location $app
 try {
   Say '패키지 설치 중 (몇 분 걸려요)' Gray
@@ -127,15 +142,7 @@ try {
   Say "작업 스케줄러 'OFFAIR Autostart' 등록" Green
 } catch { Say "자동 시작 등록 실패 — 관리자 PowerShell 에서 다시 실행해 주세요: $($_.Exception.Message)" Yellow }
 
-if (Test-Port $port) {
-  Say "포트 $port 이 이미 열려 있어요 — 예전 위키를 끄고 새로 켜요" Gray
-  Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -and $_.CommandLine.Contains("WindowTitle = 'OFFAIR 위키 ($port)'") } |
-    ForEach-Object { taskkill /PID $_.ProcessId /T /F 2>&1 | Out-Null }
-  Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-    ForEach-Object { taskkill /PID $_.OwningProcess /T /F 2>&1 | Out-Null }
-  Start-Sleep 2
-}
+Stop-Wiki
 Start-Process -FilePath $start -WindowStyle Minimized
 $until = (Get-Date).AddSeconds(60)
 while (-not (Test-Port $port) -and (Get-Date) -lt $until) { Start-Sleep 2 }
