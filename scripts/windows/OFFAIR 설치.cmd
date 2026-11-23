@@ -10,6 +10,9 @@ exit /b
 # 3) 종·실시간 마이크·녹음 중이 아닐 때까지 기다린 뒤:
 #    - 터널 설정(onair-cloudflared\config.yml)에 offair.bssmcast.com → 127.0.0.1:3020 을 넣고 터널만 다시 켠다
 #    - ONAIR-SERVER\.env 의 CF_ACCESS_AUD 에 위키 Access 앱 AUD 를 덧붙이고 서버(8000)만 다시 켠다
+# 0) CUE·MCP 가 위키를 읽는 같은 PC 내부 통로: 온에어\offair.env 에 OFFAIR_SERVICE_TOKEN 이 없으면 만들고,
+#    ONAIR-SERVER\.env 에 OFFAIR_API_BASE·OFFAIR_SERVICE_TOKEN 을 맞춘다 (바뀌면 3) 에서 서버를 다시 켠다)
+# AUD 는 $env:OFFAIR_AUD 로 미리 줄 수 있다 (없으면 물어본다).
 # 바꾸는 파일은 모두 '.bak-offair' 사본을 남긴다. 기록은 온에어\offair-install-log.txt.
 # 이 파일은 윗부분이 배치, 아랫부분이 PowerShell 인 한 파일짜리다 — BOM 없는 UTF-8, CRLF 로 저장할 것.
 $host.UI.RawUI.WindowTitle = 'OFFAIR 설치'
@@ -38,7 +41,43 @@ Write-Host ''
 Write-Host '  OFFAIR 설치' -ForegroundColor White
 Write-Host ''
 if (-not (Test-Path $root)) { Say "온에어 폴더를 못 찾았어요: $root" Red; Done 1 }
-$aud = (Read-Host '  위키 Access 앱 AUD (건너뛰려면 엔터)').Trim()
+$aud = if ($env:OFFAIR_AUD) { $env:OFFAIR_AUD.Trim() } else { (Read-Host '  위키 Access 앱 AUD (건너뛰려면 엔터)').Trim() }
+$restart = $false
+$utf8 = New-Object Text.UTF8Encoding $false
+
+# ---------- 0. CUE·MCP 가 위키를 읽는 통로 ----------
+$offEnv = Join-Path $root 'offair.env'
+$token = $null
+if (Test-Path $offEnv) {
+  $m = Select-String -LiteralPath $offEnv -Pattern '^\s*OFFAIR_SERVICE_TOKEN\s*=\s*(\S+)' | Select-Object -First 1
+  if ($m) { $token = $m.Matches[0].Groups[1].Value }
+}
+if (-not $token) {
+  $b = New-Object byte[] 32
+  [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+  $token = -join ($b | ForEach-Object { $_.ToString('x2') })
+  if (Test-Path $offEnv) { Copy-Item -LiteralPath $offEnv -Destination "$offEnv.bak-offair" -Force }
+  [IO.File]::AppendAllText($offEnv, "`r`nOFFAIR_SERVICE_TOKEN=$token`r`n", $utf8)
+  Say 'offair.env 에 CUE 통로 토큰을 만들었어요' Green
+}
+$onEnv = Join-Path $root 'ONAIR-SERVER\.env'
+if (Test-Path $onEnv) {
+  $want = [ordered]@{ OFFAIR_API_BASE = "http://127.0.0.1:$port"; OFFAIR_SERVICE_TOKEN = $token }
+  $ls = [Collections.Generic.List[string]](Get-Content -LiteralPath $onEnv -Encoding UTF8)
+  $changed = $false
+  foreach ($k in $want.Keys) {
+    $line = "$k=$($want[$k])"
+    $idx = 0..($ls.Count - 1) | Where-Object { $ls[$_] -match "^\s*$k\s*=" } | Select-Object -First 1
+    if ($null -eq $idx) { $ls.Add($line); $changed = $true }
+    elseif ($ls[$idx].Trim() -ne $line) { $ls[$idx] = $line; $changed = $true }
+  }
+  if ($changed) {
+    Copy-Item -LiteralPath $onEnv -Destination "$onEnv.bak-offair-cue" -Force
+    [IO.File]::WriteAllLines($onEnv, $ls, $utf8)
+    $restart = $true
+    Say 'ONAIR .env 에 위키 통로(OFFAIR_API_BASE·토큰)를 넣었어요 — 서버는 아래에서 다시 켜요' Green
+  } else { Say 'ONAIR 위키 통로 설정은 이미 맞아요' Gray }
+} else { Say "ONAIR .env 를 못 찾았어요: $onEnv — 위키 통로는 건너뛰어요" Yellow }
 
 # ---------- 1. 받기·빌드 ----------
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Say 'git 이 없어요.' Red; Done 1 }
@@ -62,7 +101,14 @@ Say ('받음: ' + (git -C $app log -1 --format='%h %s')) Green
 Push-Location $app
 try {
   Say '패키지 설치 중 (몇 분 걸려요)' Gray
-  $out = npm ci --no-audit --no-fund 2>&1
+  $env:npm_config_fetch_retries = '5'
+  $env:npm_config_fetch_retry_mintimeout = '20000'
+  $env:npm_config_fetch_retry_maxtimeout = '120000'
+  for ($try = 1; $try -le 3; $try++) {
+    $out = npm ci --no-audit --no-fund 2>&1
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($try -lt 3) { Say "패키지 설치 실패 ($try/3) — 30초 뒤 다시 해요" Yellow; Start-Sleep 30 }
+  }
   if ($LASTEXITCODE -ne 0) { Say '패키지 설치 실패' Red; $out | Select-Object -Last 15 | ForEach-Object { Say "    $_" DarkRed }; Done 1 }
   Say '빌드 중 (3~5분)' Gray
   $out = npm run build 2>&1
@@ -165,7 +211,7 @@ if (-not (Test-Path $envFile)) { Say "ONAIR .env 를 못 찾았어요: $envFile"
 $envLines = [Collections.Generic.List[string]](Get-Content -LiteralPath $envFile -Encoding UTF8)
 $j = 0..($envLines.Count - 1) | Where-Object { $envLines[$_] -match '^\s*CF_ACCESS_AUD\s*=' } | Select-Object -First 1
 if ($null -ne $j -and $envLines[$j].Contains($aud)) {
-  Say 'ONAIR 에 이미 위키 AUD 가 있어요 — 서버는 그대로 둬요' Gray
+  Say 'ONAIR 에 이미 위키 AUD 가 있어요' Gray
 } else {
   Copy-Item -LiteralPath $envFile -Destination "$envFile.bak-offair" -Force
   if ($null -eq $j) { $envLines.Add("CF_ACCESS_AUD=$aud") }
@@ -175,7 +221,11 @@ if ($null -ne $j -and $envLines[$j].Contains($aud)) {
   }
   [IO.File]::WriteAllLines($envFile, $envLines, (New-Object Text.UTF8Encoding $false))
   Say 'ONAIR .env 에 위키 AUD 를 덧붙였어요' Green
-
+  $restart = $true
+}
+if (-not $restart) {
+  Say 'ONAIR 서버는 그대로 둬요' Gray
+} else {
   while ($why = Busy) { Say "$why — 끝날 때까지 기다려요" Yellow; Start-Sleep 20 }
   Say 'ONAIR 서버만 다시 켜는 중 (1분쯤)' Gray
   Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
