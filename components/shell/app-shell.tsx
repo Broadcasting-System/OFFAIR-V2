@@ -10,14 +10,13 @@ import { ManagedTree, NewDocButton } from "@/components/manage/managed-tree";
 import { treeSpace, useTree } from "@/components/manage/tree-ops";
 import { Toaster } from "@/components/ui/toast";
 import { canEditNow, useMe } from "@/lib/wiki/client";
-import { loginHref, SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
+import { SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
 import { SpaceSwitcher, spaceSub } from "./space-switcher";
 import { UserMenu } from "./user-menu";
 import {
   ClockIcon,
   CloseIcon,
   CodeIcon,
-  LockIcon,
   MenuIcon,
   MoonIcon,
   SearchIcon,
@@ -200,19 +199,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {canSeeSpace && <NewDocButton />}
               </div>
             </div>
-            {canSeeSpace ? (
-              <ManagedTree space={space} onNavigate={() => setSheetOpen(false)} />
-            ) : (
-              <div className="mx-2 mt-2 rounded-lg border border-dashed border-lock-line bg-lock-bg px-3 py-4 text-center text-[13px] text-lock">
-                <LockIcon size={18} className="mx-auto mb-1.5" />
-                로그인한 부원만 볼 수 있어요
-                {me && !me.authenticated && (
-                  <a href={loginHref(pathname)} className="mx-auto mt-2.5 flex h-7 w-fit items-center rounded-md bg-lock px-3 text-[12.5px] font-semibold text-lock-fg">
-                    로그인
-                  </a>
-                )}
-              </div>
-            )}
+            {/* 손님에게는 트리 자리를 비운다. 로그인은 본문의 OFF AIR 화면에서 (components/members/login-wall.tsx) */}
+            {canSeeSpace && <ManagedTree space={space} onNavigate={() => setSheetOpen(false)} />}
             {editable && (
               <div className="mt-6 border-t border-line-2 px-2 pt-3 text-[13px]">
                 <Link

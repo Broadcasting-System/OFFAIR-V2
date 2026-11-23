@@ -19,6 +19,8 @@ import type { Actor, Change, Space } from "./space";
  *   `seed-import.json` 에 적어 두고, 지금 위키 문서가 그 rev 와 같을 때만 새 씨앗으로 바꾼다.
  *   가져온 적 없는 같은 경로 문서도 건너뛴다. (`overwrite` 를 켜면 둘 다 덮어쓴다)
  * - MDX 로 읽을 수 없는 문서는 건너뛰고 이유를 알려 준다 (화면이 깨지지 않게).
+ * - 씨앗 폴더에 `sidebar.json`({"categories": [...]}) 이 있으면 새로 붙이는 카테고리를 그 순서로 붙인다
+ *   (이미 위키에 있던 카테고리 순서는 건드리지 않는다).
  * - 바뀐 문서·사이드바 카테고리·seed-import.json 을 한 번에 커밋한다 (공간의 보통 저장 경로 applyChanges).
  */
 
@@ -137,6 +139,18 @@ function prepare(file: string, text: string): { raw: string; body: string; title
 /**
  * 씨앗 폴더를 공간으로 가져온다. 공간의 저장 줄(lock) 안에서 한 번에 계획하고 한 커밋으로 남긴다.
  */
+/** 씨앗 폴더의 sidebar.json 카테고리 순서 (없거나 읽을 수 없으면 빈 배열) */
+export function readSeedOrder(dir: string): string[] {
+  const raw = readIfExists(path.join(dir, "sidebar.json"));
+  if (raw === null) return [];
+  try {
+    const data = JSON.parse(raw.toString("utf8")) as { categories?: unknown };
+    return Array.isArray(data.categories) ? data.categories.filter((c): c is string => typeof c === "string" && c.trim() !== "") : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function importDocs(space: Space, seedDir: string, opts: ImportOptions = {}): Promise<ImportReport> {
   const dir = path.resolve(seedDir);
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
@@ -144,6 +158,7 @@ export async function importDocs(space: Space, seedDir: string, opts: ImportOpti
   }
   const validate = opts.validate ?? validateMdx;
   const files = listSeedFiles(dir);
+  const seedOrder = readSeedOrder(dir);
 
   // MDX 확인은 느릴 수 있어 lock 밖에서 먼저 한다
   type Prepared = { file: string; key: string; raw: string; title: string; category: string };
@@ -227,11 +242,12 @@ export async function importDocs(space: Space, seedDir: string, opts: ImportOpti
     const categories = hasSidebarFile ? [...sidebar.categories] : [...space.categoryOrder()];
     const categoriesAdded: string[] = [];
     for (const r of written) {
-      if (!categories.includes(r.category)) {
-        categories.push(r.category);
-        categoriesAdded.push(r.category);
-      }
+      if (!categories.includes(r.category) && !categoriesAdded.includes(r.category)) categoriesAdded.push(r.category);
     }
+    // 새 카테고리는 씨앗 sidebar.json 순서로 (거기 없는 것은 뒤에, 처음 나온 순서대로)
+    const rank = (c: string) => (seedOrder.includes(c) ? seedOrder.indexOf(c) : seedOrder.length);
+    categoriesAdded.sort((a, b) => rank(a) - rank(b));
+    categories.push(...categoriesAdded);
     if (categoriesAdded.length > 0 || (written.length > 0 && !hasSidebarFile)) {
       changes.push({ rel: space.layout.sidebarFile, data: JSON.stringify({ ...sidebar.extra, categories }, null, 2) + "\n" });
     }

@@ -74,6 +74,17 @@ describe("개발 문서 가져오기", () => {
     assert.equal(sb.git(["rev-list", "--count", "HEAD"]).trim(), "1");
   });
 
+  test("씨앗 sidebar.json 이 있으면 새 카테고리를 그 순서로 붙인다", async () => {
+    put("b.mdx", doc({ title: "기능", category: "기능별", order: 1 }, "x\n"));
+    put("a.mdx", doc({ title: "구조", category: "시작하기", order: 1 }, "x\n"));
+    put("c.mdx", doc({ title: "서버", category: "서버", order: 1 }, "x\n"));
+    put("d.mdx", doc({ title: "기타", category: "기타", order: 1 }, "x\n"));
+    fs.writeFileSync(path.join(seed, "sidebar.json"), JSON.stringify({ categories: ["시작하기", "서버", "기능별"] }));
+    const r = await importDocs(members(), seed);
+    assert.deepEqual(r.categoriesAdded, ["시작하기", "서버", "기능별", "기타"]);
+    assert.deepEqual(members().readSidebar().categories, ["시작하기", "서버", "기능별", "기타"]);
+  });
+
   test("다시 돌리면 같은 문서는 건너뛰고 커밋도 없다. 씨앗이 바뀐 것만 고친다", async () => {
     seedBasics();
     await importDocs(members(), seed);
