@@ -1,44 +1,64 @@
 ---
 title: ONAIR 시작하기
-description: 방송 장비를 원격으로 제어하는 ONAIR 시스템 개요
+description: 방송 장비를 원격으로 다루는 ONAIR 시스템 한눈에 보기
 category: ONAIR 시작하기
 order: 1
 ---
 
-**ONAIR** 는 부산소프트웨어마이스터고등학교에서 방송 장비, 시보, 송출 화면 등을 원격으로 조작하기 위해 제작되었습니다. 방송실에 직접 있지 않아도 같은 네트워크라면 실제 장비를 조작할 수 있습니다.
+**ONAIR** 는 부산소프트웨어마이스터고 방송부가 교실 스피커 방송, 시보, 송출 화면, 강당 음향·조명·녹음을 원격으로 다루려고 만든 시스템이에요. 방송실에 직접 있지 않아도 컨트롤 화면이나 앱에서 실제 장비를 조작할 수 있어요.
 
-<Figure src="/assets/onair/00-main.webp" alt="ONAIR 컨트롤 메인 화면" caption="ONAIR 컨트롤 메인 화면 — 왼쪽이 메뉴, 오른쪽이 작업 영역" />
+<Figure src="/assets/onair/00-main.webp" alt="ONAIR 컨트롤 메인 화면" caption="ONAIR 컨트롤 메인 화면. 왼쪽이 메뉴, 오른쪽이 작업 영역" />
 
 <Callout type="info">
-모든 변경은 같은 네트워크의 **서버를 거쳐 실제 장비(스피커·송출 화면)** 로 전달됩니다.
+모든 조작은 방송실 [서버 PC](/docs/onair-server)를 거쳐 실제 장비(스피커·송출 화면·강당 장비)로 가요. 강당 장비는 강당 노트북을 한 번 더 거쳐요.
 </Callout>
 
-## 메뉴 구성
+## 쓰는 곳
 
-왼쪽 사이드바에서 기능을 이동합니다.
+| 어디서 | 무엇 |
+| --- | --- |
+| 컨트롤 화면 (웹·앱) | 모든 기능. [접속과 화면 구성](/docs/onair-access) |
+| CUE 도우미 | 컨트롤 화면 안에서 말로 묻고 조작. [CUE 도우미](/docs/onair-cue) |
+| 내 Claude·ChatGPT 앱 | ONAIR 를 커넥터로 붙여 말로 조작. [ONAIR MCP](/docs/onair-mcp) |
+| 선생님 화면 | 선생님이 방송부에 요청. [선생님 요청](/docs/onair-teacher) |
+| 학생 live 화면 | 학생이 송출 화면을 폰으로 보기. [학생 기기 화면](/docs/onair-live) |
+| 외부 공유 화면 | 외부 발표자가 노트북 화면 보내기. [외부 화면 공유](/docs/onair-share) |
+
+## 기능 둘러보기
 
 <CardGrid>
-  <Card href="/docs/onair-main" title="메인 세팅">
-    TTS 음성 방송 · 스피커 관리 · 네트워크 상태 · 방송 모니터링
+  <Card href="/docs/onair-main" title="메인 (TTS · 스피커)">
+    TTS 음성 방송, 스피커 켜고 끄기, 네트워크 상태
   </Card>
-  <Card href="/docs/onair-time" title="시보 설정">
-    학교 종을 그룹·요일별 시간표로 등록·전송
+  <Card href="/docs/onair-mic" title="마이크 방송">
+    내 기기 마이크로 실시간 방송, 녹음 후 방송
   </Card>
-  <Card href="/docs/onair-files" title="파일 관리">
-    이미지·동영상·음원·프리젠테이션 업로드·관리
+  <Card href="/docs/onair-time" title="시보">
+    학교 종을 그룹·요일별 시간표로 만들고 적용하기
   </Card>
-  <Card href="/docs/onair-banner" title="현수막">
-    초광폭 현수막에 점수보드·이미지·텍스트 송출
+  <Card href="/docs/onair-media" title="송출 화면">
+    영상·이미지·PPT·유튜브를 송출 채널에 띄우기
   </Card>
-  <Card href="/docs/onair-media" title="미디어 송출">
-    영상·이미지·PPT·오디오를 송출 화면에 원격 제어
+  <Card href="/docs/onair-hall" title="강당 콘솔">
+    강당 음향 콘솔 페이더·뮤트·씬, 게인·EQ·에코
+  </Card>
+  <Card href="/docs/onair-lighting" title="강당 조명">
+    조명 밝기·색·장면, 음악 조명
+  </Card>
+  <Card href="/docs/onair-recording" title="녹음·녹화">
+    콘솔 녹음, 송출 화면 녹화, 휴대폰 영상 합치기
+  </Card>
+  <Card href="/docs/onair-hall-relay" title="강당 소리 교실 중계">
+    강당 행사 소리를 교실 스피커로 실시간
   </Card>
 </CardGrid>
 
 ## 공통 팁
 
 <Callout type="tip">
-- **시보는 `전송`** 을 눌러야, **미디어·현수막은 선택 즉시** 반영됩니다.
-- 음원·이미지·영상은 먼저 **파일 관리**에 올려둬야 각 메뉴에서 고를 수 있습니다.
-- 작업이 끝나면 **`송출 끄기`** 로 화면을 내려 두세요.
+- **시보는 적용하기** 를 눌러야, **송출·현수막은 고르는 즉시** 반영돼요.
+- 음원·이미지·영상은 먼저 **파일** 메뉴에 올려 둬야 각 메뉴에서 고를 수 있어요.
+- 다 쓴 송출 채널은 **송출 끄기** 로 내려 둬요.
+- 종이 먼저예요. 종 직전에는 방송이 막히거나 저절로 끝나요.
+- 처음이면 [하면 안 되는 것](/docs/onair-donts)부터 읽어요.
 </Callout>
