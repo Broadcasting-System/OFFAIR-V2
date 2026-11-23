@@ -964,26 +964,7 @@ html[data-cmt-margin="on"] .toc-pop {
   pointer-events: auto;
 }
 
-/* =========================== 부원 공간 (시안 f8) =========================== */
-.members-band {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 22px;
-  background: var(--lock-bg);
-  color: var(--lock);
-  border-bottom: 1px solid var(--lock-line);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-@media (max-width: 768px) {
-  .members-band {
-    padding: 0 16px;
-  }
-}
-
+/* =========================== 로그인 벽 (시안 f8) =========================== */
 /* 로그인 벽 — 본문 칼럼 전체를 덮는 옅은 바탕 위 가운데 카드 */
 .login-wall {
   flex: 1;

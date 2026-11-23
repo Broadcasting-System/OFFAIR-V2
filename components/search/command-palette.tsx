@@ -8,13 +8,11 @@ import {
   DocIcon,
   EnterIcon,
   HistoryIcon,
-  LockIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
 } from "@/components/shell/icons";
 import { toggleTheme, useTheme } from "@/components/shell/ui-prefs";
-import type { SearchDoc } from "@/lib/content";
 import { api, canEditNow, isTypingTarget, toggleHistory, useMe } from "@/lib/wiki/client";
 import { docFromPath, editHref, SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
 import { highlight, queryTokens, trimSnippet, type RecentDoc } from "@/lib/wiki/search-text";
@@ -69,33 +67,14 @@ type Item =
 
 type Chip = "all" | SpaceKey;
 
-/** 서버 검색이 안 될 때 쓰는 제목·소제목 검색 (예전 대화상자와 같은 규칙) */
-function localSearch(index: SearchDoc[], q: string): Hit[] {
-  const tokens = queryTokens(q);
-  return index
-    .filter((d) => {
-      const hay = [d.title, d.description, d.category, ...d.headings].join("  ").toLowerCase();
-      return tokens.every((t) => hay.includes(t));
-    })
-    .map((d) => ({
-      space: "guide" as const,
-      url: d.url,
-      title: d.title,
-      category: d.category,
-      description: d.description,
-      snippet: d.headings.find((h) => tokens.some((t) => h.toLowerCase().includes(t))) ?? d.description,
-      heading: null,
-      score: d.title.toLowerCase().includes(q.toLowerCase()) ? 100 : 1,
-    }))
-    .sort((a, b) => b.score - a.score);
-}
-
+/**
+ * 두 공간 모두 부원 전용이라 검색은 언제나 서버(/api/wiki/<space>/search, 권한 확인)로만 한다.
+ * 읽을 수 없는 사람에게는 결과 대신 "부원만 찾을 수 있어요".
+ */
 export function CommandPalette({
-  index,
   open,
   onClose,
 }: {
-  index: SearchDoc[];
   open: boolean;
   onClose: () => void;
 }) {
@@ -145,11 +124,11 @@ export function CommandPalette({
   /* ───────────── 검색 (잠깐 멈춘 뒤 서버로) ───────────── */
   const readMembers = !!me?.canReadMembers;
   useEffect(() => {
-    if (!open || !searchText) return;
+    if (!open || !searchText || !readMembers) return;
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       setLoading(true);
-      const spaces: SpaceKey[] = readMembers ? ["guide", "members"] : ["guide"];
+      const spaces: SpaceKey[] = ["guide", "members"];
       const parts = await Promise.all(
         spaces.map(async (s) => {
           try {
@@ -168,7 +147,7 @@ export function CommandPalette({
             );
           } catch (e) {
             if ((e as Error).name === "AbortError") throw e;
-            return s === "guide" ? localSearch(index, searchText) : [];
+            return [];
           }
         })
       ).catch(() => null);
@@ -180,7 +159,7 @@ export function CommandPalette({
       clearTimeout(t);
       ctl.abort();
     };
-  }, [open, searchText, readMembers, index]);
+  }, [open, searchText, readMembers]);
 
   /* ───────────── 할 일 ───────────── */
   const nav = useMemo(
@@ -259,7 +238,7 @@ export function CommandPalette({
       return [{ label: "할 일", items: actions.filter((a) => !f || a.title.toLowerCase().includes(f)).map((a) => ({ kind: "action", id: a.id, action: a })) }];
     }
     if (!searchText) {
-      const docs = recent.docs.filter((d) => d.space === "guide" || readMembers).slice(0, 5);
+      const docs = readMembers ? recent.docs.slice(0, 5) : [];
       return [
         { label: "최근 본 문서", items: docs.map((d) => ({ kind: "doc" as const, id: `r:${d.url}`, hit: d })) },
         { label: "할 일", items: actions.map((a) => ({ kind: "action" as const, id: a.id, action: a })) },
@@ -319,7 +298,7 @@ export function CommandPalette({
   if (!open) return null;
 
   const tokens = queryTokens(searchText);
-  const showChips = !!searchText && !actionMode;
+  const showChips = !!searchText && !actionMode && readMembers;
   let idx = -1;
 
   return (
@@ -352,7 +331,7 @@ export function CommandPalette({
 
         {showChips && (
           <div className="flex gap-1.5 overflow-x-auto border-b border-line-2 px-[18px] py-2.5" role="tablist" aria-label="공간 고르기">
-            {(["all", "guide", ...(readMembers ? ["members"] : [])] as Chip[]).map((c) => (
+            {(["all", "guide", "members"] as Chip[]).map((c) => (
               <button
                 key={c}
                 type="button"
@@ -398,10 +377,11 @@ export function CommandPalette({
               })}
             </Fragment>
           ))}
-          {searchText && hits && flat.length === 0 && (
+          {searchText && !readMembers && <p className="px-3 py-8 text-center text-[14px] text-fg-3">부원만 찾을 수 있어요</p>}
+          {searchText && readMembers && hits && flat.length === 0 && (
             <p className="px-3 py-8 text-center text-[14px] text-fg-3">「{searchText}」 와 맞는 문서가 없어요</p>
           )}
-          {searchText && !hits && <p className="px-3 py-8 text-center text-[14px] text-fg-3">찾는 중…</p>}
+          {searchText && readMembers && !hits && <p className="px-3 py-8 text-center text-[14px] text-fg-3">찾는 중…</p>}
           {actionMode && flat.length === 0 && <p className="px-3 py-8 text-center text-[14px] text-fg-3">맞는 할 일이 없어요</p>}
         </div>
 
@@ -485,7 +465,6 @@ function ItemRow({ item, tokens, q, on }: { item: Item; tokens: string[]; q: str
     );
   }
   const h = item.hit;
-  const members = h.space === "members";
   const isHit = "snippet" in h;
   const snippet = isHit ? trimSnippet(h.snippet, q, 140) : "";
   return (
@@ -502,12 +481,6 @@ function ItemRow({ item, tokens, q, on }: { item: Item; tokens: string[]; q: str
             {SPACE_LABEL[h.space]}
             {h.category ? ` › ${h.category}` : ""}
           </span>
-          {members && (
-            <span className="inline-flex items-center gap-0.5 self-center rounded bg-lock-bg px-1.5 text-[11px] font-semibold text-lock">
-              <LockIcon size={10} />
-              부원만
-            </span>
-          )}
         </span>
         {isHit && snippet && (
           <span className="mt-[3px] line-clamp-2 block text-[13px] leading-[1.55] text-fg-2">

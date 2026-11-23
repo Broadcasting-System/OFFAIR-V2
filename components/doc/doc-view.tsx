@@ -2,8 +2,7 @@ import Link from "next/link";
 import { ArrowLeftIcon, ArrowRightIcon } from "@/components/shell/icons";
 import type { ContentSpace, Doc, DocMeta } from "@/lib/content";
 import { formatDate, getDocInfo, readingMinutes } from "@/lib/doc-info";
-import { SPACE_LABEL } from "@/lib/wiki/links";
-import { MembersBand } from "@/components/members/band";
+import { SPACE_LABEL, spaceHome } from "@/lib/wiki/links";
 import { PageBar } from "@/components/shell/page-bar";
 import { TocPop, TocSide } from "@/components/toc";
 import { SiteFooter } from "@/components/site-footer";
@@ -36,18 +35,17 @@ export async function DocView({
   doc: Doc;
   prev: DocMeta | null;
   next: DocMeta | null;
-  /** 부원 공간이면 위에 보라색 띠, 빵부스러기는 "부원 공간" */
+  /** 빵부스러기 첫 칸: 가이드북 또는 개발 문서 */
   space?: ContentSpace;
   children: React.ReactNode;
 }) {
   const info = await getDocInfo(space, doc);
   const minutes = readingMinutes(doc.body);
-  const home = space === "guide" ? "/" : "/members";
+  const home = spaceHome(space);
 
   return (
     <HistoryProvider space={space} slug={doc.slug}>
       <CommentsProvider space={space} slug={doc.slug}>
-        {space === "members" && <MembersBand />}
         <PageBar
           crumbs={[{ label: SPACE_LABEL[space], href: home }, { label: doc.category }]}
           toc={doc.toc}

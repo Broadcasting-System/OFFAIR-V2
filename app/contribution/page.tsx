@@ -5,13 +5,17 @@ import { MDX } from "@/lib/mdx";
 import { EditFab } from "@/components/dev/edit-fab";
 import { PageBar } from "@/components/shell/page-bar";
 import { SiteFooter } from "@/components/site-footer";
+import { readGate } from "@/components/members/read-gate";
 
 export const metadata: Metadata = {
   title: "문서 기여 가이드",
-  description: "OFFAIR 가이드북 문서를 작성·수정하는 방법",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ContributionPage() {
+  const wall = await readGate("/contribution");
+  if (wall) return wall;
   const source = fs.readFileSync(
     path.join(process.cwd(), "content", "contribution.mdx"),
     "utf8"

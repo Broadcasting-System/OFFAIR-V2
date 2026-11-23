@@ -54,6 +54,12 @@ export const BookIcon = (p: IconProps) => (
     <path d="M12 6.5v13" />
   </Svg>
 );
+/** 개발 문서 (꺾쇠 괄호) */
+export const CodeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m8.5 7.5-5 4.5 5 4.5M15.5 7.5l5 4.5-5 4.5M13.5 5l-3 14" />
+  </Svg>
+);
 export const MoonIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" />

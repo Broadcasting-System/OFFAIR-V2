@@ -3,14 +3,18 @@ import Link from "next/link";
 import { PageBar } from "@/components/shell/page-bar";
 import { SiteFooter } from "@/components/site-footer";
 import { formatDate, getRecentDocs } from "@/lib/doc-info";
+import { readGate } from "@/components/members/read-gate";
 
 export const metadata: Metadata = {
   title: "최근 바뀐 문서",
-  description: "최근에 고쳐진 가이드북 문서 목록",
 };
 
-/** 최근 바뀐 문서 — 지금은 파일 수정 시각 기준. (위키 저장소가 붙으면 수정 기록으로) */
-export default function RecentPage() {
+export const dynamic = "force-dynamic";
+
+/** 최근 바뀐 가이드북 문서 (파일 수정 시각 기준). 부원 전용 */
+export default async function RecentPage() {
+  const wall = await readGate("/recent");
+  if (wall) return wall;
   const docs = getRecentDocs();
 
   return (

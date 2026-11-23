@@ -5,10 +5,19 @@
 
 export type SpaceKey = "guide" | "members";
 
+/**
+ * 화면에 보이는 공간 이름. 내부 id(guide·members)와 주소(/docs·/members)는 그대로 두고 이름만 바꾼다
+ * (링크·git 이력·CUE/MCP 의 space 값이 그대로 돌게).
+ */
 export const SPACE_LABEL: Record<SpaceKey, string> = {
   guide: "가이드북",
-  members: "부원 공간",
+  members: "개발 문서",
 };
+
+/** 공간 첫 화면 주소 */
+export function spaceHome(space: SpaceKey): string {
+  return space === "guide" ? "/" : "/members";
+}
 
 /** 슬러그 조각을 URL 경로로 (한글은 인코딩) */
 export function slugPath(slug: string[]): string {

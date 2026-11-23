@@ -5,13 +5,19 @@ import { HomeSearch } from "@/components/home-search";
 import { PageBar } from "@/components/shell/page-bar";
 import { SiteFooter } from "@/components/site-footer";
 import { EmptySpace } from "@/components/space/empty-space";
+import { readGate } from "@/components/members/read-gate";
 import { getCategoryOrder, getNav } from "@/lib/content";
 import { formatDate, getRecentDocs } from "@/lib/doc-info";
 import { getHomeConfig } from "@/lib/site";
 
 const PER_CATEGORY = 4;
 
-export default function HomePage() {
+/** 가이드북 첫 화면. 부원 전용이라 요청마다 권한을 확인해서 그린다 (손님에게는 로그인 벽만) */
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const wall = await readGate("/");
+  if (wall) return wall;
   const nav = getNav();
   const recent = getRecentDocs(6);
   const { title, description, primaryCta, secondaryCta } = getHomeConfig();

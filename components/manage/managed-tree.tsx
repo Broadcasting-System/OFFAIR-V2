@@ -55,17 +55,14 @@ import {
  *  - 키보드: 손잡이에서 ⌥↑/⌥↓ 위아래, ⌥→ 위 문서 안으로, ⌥← 밖으로, F2 이름 바꾸기
  * 읽기만 하는 사람은 예전 그대로의 트리(DocTree).
  */
-export function ManagedTree({ nav, space = "guide", onNavigate }: { nav: NavGroup[]; space?: SpaceKey; onNavigate?: () => void }) {
+export function ManagedTree({ space = "guide", onNavigate }: { space?: SpaceKey; onNavigate?: () => void }) {
   const me = useMe();
-  if (!canEditNow(me)) {
-    // 가이드북은 서버가 그린 트리, 부원 공간은 API 로 받는다 (정적 HTML 에 부원 문서가 들어가지 않게)
-    if (space === "guide") return <DocTree nav={nav} onNavigate={onNavigate} />;
-    return <FetchedTree space={space} onNavigate={onNavigate} />;
-  }
-  return <EditableTree key={space} nav={space === "guide" ? nav : []} space={space} onNavigate={onNavigate} />;
+  // 두 공간 모두 API 로 받는다 (권한 확인, 정적 HTML·루트 레이아웃에 문서 목록이 들어가지 않게)
+  if (!canEditNow(me)) return <FetchedTree space={space} onNavigate={onNavigate} />;
+  return <EditableTree key={space} space={space} onNavigate={onNavigate} />;
 }
 
-/** 읽기만 하는 사람의 부원 공간 트리 (API 로 받아 DocTree 로 그린다) */
+/** 읽기만 하는 사람의 트리 (API 로 받아 DocTree 로 그린다) */
 function FetchedTree({ space, onNavigate }: { space: SpaceKey; onNavigate?: () => void }) {
   const { groups } = useTree();
   useEffect(() => {
@@ -137,16 +134,14 @@ interface DragView {
 type Renaming = { kind: "doc"; key: string } | { kind: "cat"; name: string } | { kind: "newcat" } | null;
 type MenuState = { kind: "doc"; key: string; category: string; anchor: HTMLElement } | { kind: "cat"; name: string; anchor: HTMLElement } | null;
 
-function fromNav(nav: NavGroup[]): TGroup[] {
-  return nav.map((g) => ({ category: g.category, items: g.items.map((d) => ({ slug: d.slug, title: d.title })) }));
-}
+const NO_GROUPS: TGroup[] = [];
 
-function EditableTree({ nav, space, onNavigate }: { nav: NavGroup[]; space: SpaceKey; onNavigate?: () => void }) {
+function EditableTree({ space, onNavigate }: { space: SpaceKey; onNavigate?: () => void }) {
   const pathname = usePathname();
   const navOps = useNav();
   const { groups: loadedAny, highlight, busy } = useTree();
   const loaded = treeSpace() === space ? loadedAny : null;
-  const groups = loaded ?? fromNav(nav);
+  const groups = loaded ?? NO_GROUPS;
   const containerRef = useRef<HTMLDivElement>(null);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [renaming, setRenaming] = useState<Renaming>(null);
@@ -476,6 +471,7 @@ function EditableTree({ nav, space, onNavigate }: { nav: NavGroup[]; space: Spac
 
   return (
     <nav aria-label="문서 트리 (관리)" className="relative" ref={containerRef} aria-busy={busy}>
+      {!loaded && <p className="px-2 py-3 text-[13px] text-fg-3">불러오는 중…</p>}
       {loaded && forests.every((g) => g.count === 0) && (
         <div className="mx-2 mt-2 mb-3 rounded-md border border-dashed border-line px-3 py-4 text-center text-[13px] text-fg-3">
           아직 문서가 없어요

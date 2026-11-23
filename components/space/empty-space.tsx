@@ -18,9 +18,6 @@ export function EmptySpace({ categories }: { categories: string[] }) {
         <DocIcon size={24} />
       </span>
       <p className="mt-4 text-[17px] font-bold text-fg">아직 문서가 없어요</p>
-      <p className="mt-1 text-[14px] text-fg-3">
-        {canEditNow(me) ? "첫 문서를 만들어 보세요. 서랍의 트리에서도 만들 수 있어요." : "부원이 문서를 쓰면 여기에 보여요."}
-      </p>
       {canEditNow(me) && (
         <button
           type="button"

@@ -37,7 +37,7 @@ export default async function WritePage({ params }: PageProps) {
 
   const { viewer, canEdit, canReadMembers } = await pageAccess();
   if (!viewer.authenticated) return <LoginWall next={here} what="edit" />;
-  if (space === "members" && !canReadMembers) return <LoginWall next={here} mode="forbidden" />;
+  if (!canReadMembers) return <LoginWall next={here} mode="forbidden" />;
   if (!canEdit) return <LoginWall next={here} mode="no-edit" what="edit" />;
 
   const sp = spaceOf(space);

@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { DocIcon, LockIcon, RestoreIcon } from "@/components/shell/icons";
+import { DocIcon, RestoreIcon } from "@/components/shell/icons";
 import { toast } from "@/components/ui/toast";
 import { api, ApiError, canEditNow, emitTreeChanged, useMe } from "@/lib/wiki/client";
 import { josa, SPACE_LABEL, type SpaceKey } from "@/lib/wiki/links";
@@ -11,7 +10,7 @@ import { restoreDoc } from "./tree-ops";
 
 /**
  * 휴지통 — 공간마다 지워진 문서 목록과 "되살리기".
- * 부원 공간은 볼 수 있는 사람(canReadMembers)에게만 보인다.
+ * 두 공간 모두 부원 전용 (화면은 app/trash 가 먼저 막는다).
  */
 
 interface TrashDoc {
@@ -29,7 +28,7 @@ export function TrashList() {
   const router = useRouter();
   const [lists, setLists] = useState<Partial<Record<SpaceKey, TrashDoc[] | "error">>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const spaces: SpaceKey[] = me?.canReadMembers ? ["guide", "members"] : ["guide"];
+  const spaces: SpaceKey[] = me?.canReadMembers ? ["guide", "members"] : [];
   const spaceKey = spaces.join(",");
 
   const load = useCallback(async (list: SpaceKey[]) => {
@@ -79,12 +78,6 @@ export function TrashList() {
           <section key={s} aria-labelledby={`trash-${s}`}>
             <h2 id={`trash-${s}`} className="flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] text-fg-3">
               {SPACE_LABEL[s]}
-              {s === "members" && (
-                <span className="inline-flex items-center gap-1 rounded bg-lock-bg px-1.5 text-[11px] font-semibold text-lock">
-                  <LockIcon size={11} />
-                  부원만
-                </span>
-              )}
               {Array.isArray(list) && <span className="font-normal">{list.length}개</span>}
             </h2>
             {list === undefined && <p className="mt-3 text-[14px] text-fg-3">불러오는 중…</p>}
@@ -124,11 +117,6 @@ export function TrashList() {
           </section>
         );
       })}
-      {!editable && me && (
-        <p className="text-[13px] text-fg-3">
-          되살리기는 부원만 할 수 있어요. <Link href="/members" className="text-accent hover:underline">부원 공간</Link>
-        </p>
-      )}
     </div>
   );
 }

@@ -3,7 +3,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AppShell } from "@/components/shell/app-shell";
 import { PREFS_SCRIPT } from "@/components/shell/prefs-script";
-import { getNav, getSearchIndex } from "@/lib/content";
 
 const pretendard = localFont({
   src: "./fonts/PretendardVariable.ttf",
@@ -12,21 +11,21 @@ const pretendard = localFont({
   display: "swap",
 });
 
-// 위키 저장은 revalidatePath 로 바로 반영된다. 이 값은 git pull 등 바깥에서 바뀐 문서를
-// 늦어도 5분 안에 다시 그리기 위한 안전망이다.
-export const revalidate = 300;
+// 두 공간 모두 부원 전용이라 화면은 언제나 요청마다 그린다 (권한 확인, 정적 HTML·ISR 없음).
+// 루트 레이아웃에는 문서 목록·검색 색인을 넣지 않는다. 서랍 트리·검색은 브라우저가 권한 확인 API 로 받는다.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: "OFFAIR — 방송부 가이드북",
+    default: "OFFAIR",
     template: "%s · OFFAIR",
   },
-  description:
-    "부산소프트웨어마이스터고 방송부 OFFAIR 의 장비·송출·운영 가이드북.",
+  description: "부산소프트웨어마이스터고 방송부 OFFAIR 위키",
   metadataBase: new URL("https://offair.local"),
+  robots: { index: false, follow: false },
   openGraph: {
-    title: "OFFAIR — 방송부 가이드북",
-    description: "부산소프트웨어마이스터고 방송부 운영 가이드북",
+    title: "OFFAIR",
+    description: "부산소프트웨어마이스터고 방송부 OFFAIR 위키",
     type: "website",
   },
 };
@@ -41,8 +40,6 @@ export const viewport: Viewport = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const nav = getNav();
-  const searchIndex = getSearchIndex();
   return (
     <html lang="ko" className={pretendard.variable} suppressHydrationWarning>
       <head>
@@ -50,9 +47,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
       </head>
       <body>
-        <AppShell nav={nav} searchIndex={searchIndex}>
-          {children}
-        </AppShell>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

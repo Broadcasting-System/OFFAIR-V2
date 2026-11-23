@@ -4,7 +4,7 @@ import type { DocFull, Space } from "@/lib/store/space";
 import { extractToc as extractTocImpl, type TocItem as StoreTocItem } from "@/lib/store/markdown";
 
 /**
- * File-based MDX content layer — 공개(guide) 공간 저장소(lib/store)를 읽는다.
+ * File-based MDX content layer. 가이드북(guide)·개발 문서(members) 공간 저장소(lib/store)를 읽는다.
  *
  * Drop a `.mdx` file anywhere under `content/docs/` and it becomes a page.
  * Frontmatter controls how it appears in the sidebar:
@@ -21,8 +21,8 @@ import { extractToc as extractTocImpl, type TocItem as StoreTocItem } from "@/li
  * 저장소는 파일 mtime·크기로 캐시하므로 위키 API 로 저장하거나 파일을 직접 고쳐도
  * 다음 렌더에서 바로 반영된다 (페이지 캐시는 저장 API 가 revalidatePath 로 비운다).
  *
- * 함수마다 공간을 고를 수 있다 (기본 guide). 부원 공간(members)은 권한을 확인한 동적 페이지
- * (app/members/**)에서만 부른다 — 정적 생성·루트 레이아웃에서는 부르지 않는다.
+ * 함수마다 공간을 고를 수 있다 (기본 guide). 두 공간 모두 부원 전용이라 권한을 확인한 동적 페이지
+ * (components/members/read-gate.tsx 를 거친 화면)에서만 부른다. 정적 생성·루트 레이아웃에서는 부르지 않는다.
  */
 
 export type ContentSpace = "guide" | "members";
@@ -55,7 +55,7 @@ function guide() {
   return getStore().guide;
 }
 
-/** 공간. 부원 공간을 쓸 수 없으면(데이터 폴더 위치 문제) null */
+/** 공간. 개발 문서(members)를 쓸 수 없으면(데이터 폴더 위치 문제) null */
 export function spaceOf(id: ContentSpace = "guide"): Space | null {
   const store = getStore();
   return id === "guide" ? store.guide : store.members;
@@ -122,12 +122,6 @@ export function getDoc(slug: string[], space: ContentSpace = "guide"): Doc | nul
   return { ...meta(d), path: d.path, body: d.body, toc: d.toc };
 }
 
-export function getAllSlugs(): string[][] {
-  return guide()
-    .listDocs()
-    .map((d) => d.slug);
-}
-
 /** Sidebar tree: grouped by category, ordered by sidebar.json then `order`. */
 export function getNav(space: ContentSpace = "guide"): NavGroup[] {
   const sp = spaceOf(space);
@@ -154,28 +148,4 @@ export function getAdjacent(slug: string[], space: ContentSpace = "guide"): {
     prev: i > 0 ? flat[i - 1] : null,
     next: i >= 0 && i < flat.length - 1 ? flat[i + 1] : null,
   };
-}
-
-export interface SearchDoc {
-  title: string;
-  description: string;
-  category: string;
-  url: string;
-  headings: string[];
-}
-
-/**
- * Lightweight client-side search index: title, description, headings.
- * (본문까지 검색하는 색인은 GET /api/wiki/<space>/search)
- */
-export function getSearchIndex(): SearchDoc[] {
-  return guide()
-    .searchIndex()
-    .map((d) => ({
-      title: d.title,
-      description: d.description,
-      category: d.category,
-      url: d.url,
-      headings: d.headings,
-    }));
 }

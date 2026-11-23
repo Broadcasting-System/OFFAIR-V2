@@ -6,7 +6,7 @@
  *                                    | { ok: false, conflict: true, rev, mdx }   (409 — 그 사이 누가 게시함)
  *   uploadFile(space, file, doc?)  → { url }                            POST /api/wiki/<space>/uploads (multipart)
  *
- * - space: "guide"(공개 가이드북) 또는 "members"(부원 공간)
+ * - space: "guide"(가이드북) 또는 "members"(개발 문서). 둘 다 부원 전용
  * - path:  공간 안 문서 경로(slug), 확장자 없이. 예) "onair-time", "meeting/2026-11"
  * - rev:   문서를 열 때 받은 판 번호(파일 내용의 git 블롭 해시). 게시할 때 baseRev 로 돌려보낸다.
  *          rev 가 null 이면 새 문서 — 먼저 만들고(POST /docs) 그다음 원문을 저장한다.

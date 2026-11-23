@@ -84,9 +84,10 @@ describe("표시 달기 보조 파일", () => {
     assert.equal(files.length, 1, "보조 파일은 숨긴다");
     assert.equal(files[0].sidecarUrl, sc.url);
 
-    // 사이드카도 /uploads 대체 경로로 받을 수 있다 (JSON)
+    // 사이드카도 /uploads 대체 경로로 받을 수 있다 (JSON, 부원만)
     const parts = String(sc.url).replace("/uploads/", "").split("/");
-    const res = await h.publicUpload(req("GET", String(sc.url)), { path: parts });
+    assert.equal((await h.publicUpload(req("GET", String(sc.url)), { path: parts })).status, 401);
+    const res = await h.publicUpload(req("GET", String(sc.url), { token: "tok-member" }), { path: parts });
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("content-type"), "application/json");
   });
@@ -102,7 +103,7 @@ describe("표시 달기 보조 파일", () => {
     assert.equal(await st(form(new File(["not json"], "a.marks.json"), { of: String(main.url) })), 400);
     assert.equal(await st(form(png("a.thumb.png"), { of: String(main.url) })), 400);
     // .json 은 사이드카가 아니면 읽기 경로에서도 막는다
-    const r = await h.publicUpload(req("GET", "/x"), { path: ["2026-01", "x.json"] });
+    const r = await h.publicUpload(req("GET", "/x", { token: "tok-member" }), { path: ["2026-01", "x.json"] });
     assert.equal(r.status, 400);
   });
 });
@@ -114,7 +115,7 @@ describe("내 메뉴 (GET /api/me/activity)", () => {
       req("POST", "/x", { token: "tok-member2", body: { body: "@김부원 확인해 주세요", mentions: [{ memberId: "m-1", name: "김부원" }], anchor: { quote: "방송부", prefix: "", suffix: "" } } }),
       intro
     );
-    const got = await bodyOf(await h.getDoc(req("GET", "/x"), intro));
+    const got = await bodyOf(await h.getDoc(req("GET", "/x", { token: "tok-member" }), intro));
     await h.saveDoc(req("PUT", "/x", { token: "tok-member", body: { baseRev: got.rev, body: "\n고침\n" } }), intro);
     await h.createDoc(req("POST", "/x", { token: "tok-member", body: { title: "부원 메모", category: "메모" } }), { space: "members" });
 
@@ -132,7 +133,7 @@ describe("내 메뉴 (GET /api/me/activity)", () => {
     const b = await bodyOf(await h.activity(req("GET", "/x", { token: "tok-member2" })));
     assert.equal((b.mentions as unknown[]).length, 0);
     assert.equal((b.edits as unknown[]).length, 0);
-    // 교사는 부원 공간 기록을 못 본다, 손님은 401
+    // 교사는 어느 공간 기록도 못 본다, 손님은 401
     const t = await bodyOf(await h.activity(req("GET", "/x", { token: "tok-teacher" })));
     assert.deepEqual(t.edits, []);
     assert.equal((await h.activity(req("GET", "/x"))).status, 401);
